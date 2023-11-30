@@ -433,9 +433,10 @@ class Sampler:
         return stroke
 
     @staticmethod
-    def plot(seq: torch.Tensor, fpath: str):
+    def plot(_seq: torch.Tensor, fpath: str):
+        seq = torch.zeros_like(_seq)
         # Take the cumulative sums of $(\Delta x, \Delta y)$ to get $(x, y)$
-        seq[:, 0:2] = torch.cumsum(seq[:, 0:2], dim=0)
+        seq[:, 0:2] = torch.cumsum(_seq[:, 0:2], dim=0)
         # Create a new numpy array of the form $(x, y, q_2)$
         seq[:, 2] = seq[:, 3]
         seq = seq[:, 0:3].detach().cpu().numpy()
@@ -631,6 +632,8 @@ class Trainer():
                 wandb.log(log_values, step=step_num)
 
     def sample(self, epoch, display=False):
+        orig_paths = []
+        decoded_paths = []
         for idx in self.valid_idxs:
             orig_path = self.run_dir / f'sample_{idx:04d}_epoch_{epoch:05d}_orig.png'
             decoded_path = self.run_dir / f'sample_{idx:04d}_epoch_{epoch:05d}_decoded.png'
@@ -647,6 +650,9 @@ class Trainer():
             if display:
                 Image.open(orig_path).show()
                 Image.open(decoded_path).show()
+            orig_paths.append(orig_path)
+            decoded_paths.append(decoded_path)
+        return sorted(orig_paths), sorted(decoded_paths)
     
     def save(self, epoch):
         torch.save(self.encoder.state_dict(), \
