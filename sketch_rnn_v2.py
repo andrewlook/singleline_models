@@ -39,12 +39,11 @@ import einops
 import numpy as np
 import torch
 import torch.nn as nn
+import wandb
 from matplotlib import pyplot as plt
 from PIL import Image
 from torch import optim
 from torch.utils.data import DataLoader, Dataset
-
-import wandb
 
 
 class StrokesDataset(Dataset):
@@ -684,21 +683,17 @@ def main():
         )
         wandb.watch((trainer.encoder, trainer.decoder), log="all", log_freq=10, log_graph=True)
 
-    for i in range(hp.epochs):
-        print(f"epoch {i}")
-        trainer.train_one_epoch(epoch=i, use_wandb=hp.use_wandb)
-        if i % 5 == 0:
+    for epoch in range(hp.epochs):
+        print(f"epoch {epoch}")
+        trainer.train_one_epoch(epoch=epoch, use_wandb=hp.use_wandb)
+        if epoch % 5 == 0:
             avg_loss, avg_reconstruction_loss, avg_kl_loss = trainer.validate_one_epoch()
-            print(f"VALIDATION - STEP {trainer.total_steps} - VAL_AVG_LOSS: {avg_loss}")
+            print(f"VALIDATION - EPOCH {epoch} - STEP {trainer.total_steps} - VAL_AVG_LOSS: {avg_loss}")
             if hp.use_wandb:
                 wandb.log(dict(val_avg_loss=avg_loss), step=trainer.total_steps)
-            
-            trainer.save(i)
-
-            trainer.sample()
+            trainer.save(epoch)
+            trainer.sample(epoch)
         
-
-
 
 if __name__ == "__main__":
     main()
