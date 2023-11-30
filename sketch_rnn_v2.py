@@ -682,13 +682,15 @@ class Trainer():
 
 
 def main():
+    use_wandb = False
+
     hp = HParams()
     hp.learning_rate = 1e-3
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     trainer = Trainer(hp=hp,
                       device=device,
-                      use_wandb=True)
+                      use_wandb=use_wandb)
     
     validate_every_n_epochs = 2
     save_every_n_epochs = 10
@@ -697,7 +699,7 @@ def main():
         print(f"epoch {epoch}")
         trainer.train_one_epoch(epoch=epoch)
         if epoch % validate_every_n_epochs == 0:
-            avg_loss, avg_reconstruction_loss, avg_kl_loss = trainer.validate_one_epoch()
+            avg_loss, *_ = trainer.validate_one_epoch()
             print(f"VALIDATION - EPOCH {epoch} - STEP {trainer.total_steps} - VAL_AVG_LOSS: {avg_loss}")
         if epoch % save_every_n_epochs == 0:
             trainer.save(epoch)
