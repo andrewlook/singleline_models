@@ -638,8 +638,6 @@ class Trainer():
     def train_one_epoch(self, epoch, parent_progressbar=None):
         steps_per_epoch = len(self.train_loader)
         for idx, batch in enumerate(progress_bar(iter(self.train_loader), parent=parent_progressbar)):
-            if idx > 10:
-                break
             step_num = idx + epoch * steps_per_epoch
             self.total_steps = step_num
             loss, reconstruction_loss, kl_loss, batch_items = self.step(batch, is_training=True)
