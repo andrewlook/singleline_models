@@ -1,11 +1,15 @@
-import numpy as np
-import matplotlib.pyplot as plt
-import PIL
+from pathlib import Path
 
+import matplotlib.pyplot as plt
+import numpy as np
+import PIL
 import torch
 import torch.nn as nn
-from torch import optim
 import torch.nn.functional as F
+from torch import optim
+from torch.autograd import Variable
+
+import wandb
 
 use_cuda = torch.cuda.is_available()
 
@@ -68,7 +72,7 @@ def normalize(strokes):
         data.append(seq)
     return data
 
-dataset = np.load(hp.data_location, encoding='latin1')
+dataset = np.load(Path("data/quickdraw") / hp.data_location, encoding='latin1', allow_pickle=True)
 data = dataset['train']
 data = purify(data)
 data = normalize(data)
@@ -125,7 +129,7 @@ class EncoderRNN(nn.Module):
             # then must init with zeros
             if use_cuda:
                 hidden = torch.zeros(2, batch_size, hp.enc_hidden_size).cuda()
-                cell = torch.zeros(2, batch_size, hp.enc_hidden_size.cuda()
+                cell = torch.zeros(2, batch_size, hp.enc_hidden_size).cuda()
             else:
                 hidden = torch.zeros(2, batch_size, hp.enc_hidden_size)
                 cell = torch.zeros(2, batch_size, hp.enc_hidden_size)
@@ -264,7 +268,9 @@ class Model():
         self.decoder_optimizer.step()
         # some print and save:
         if epoch%1==0:
-            print('epoch',epoch,'loss',loss.data[0],'LR',LR.data[0],'LKL',LKL.data[0])
+            log_values = {"epoch": epoch, "loss": loss.item(), 'LR': LR.item(), 'LKL': LKL.item()}
+            wandb.log(log_values, step=epoch)
+            print(log_values)
             self.encoder_optimizer = lr_decay(self.encoder_optimizer)
             self.decoder_optimizer = lr_decay(self.decoder_optimizer)
         if epoch%100==0:
@@ -409,7 +415,15 @@ def make_image(sequence, epoch, name='_output_'):
     plt.close("all")
 
 if __name__=="__main__":
+    config = hp.__dict__
+    config['architecture'] = 'Pytorch-Sketch-RNN'
+    wandb.init(
+        project='sketchrnn-pytorch',
+        config=config,
+    )
     model = Model()
+
+    wandb.watch((model.encoder, model.decoder), log="all", log_freq=10, log_graph=True)
     for epoch in range(50001):
         model.train(epoch)
 
