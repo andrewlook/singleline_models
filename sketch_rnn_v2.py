@@ -465,9 +465,10 @@ class Sampler:
 
 
 class HParams():
+    architecture = 'Pytorch-LabML'
+
     dataset_name: str = 'cat'
 
-    use_wandb = False
     learning_rate = 1e-3
     
     # Encoder and decoder sizes
@@ -512,17 +513,34 @@ class Trainer():
     kl_div_loss = KLDivLoss()
     reconstruction_loss = ReconstructionLoss()
 
-    def __init__(self, hp: HParams, run_id: str, device="cuda",models_dir="models"):
+    def __init__(self, hp: HParams, device="cuda", use_wandb=False, models_dir="models"):
         self.hp = hp
+        config = {k: getattr(hp, k) for k in hp.__dir__() if not k.startswith('__')}
+        print(config)
+
         self.device = device
+        self.use_wandb = use_wandb
+        
+        if self.use_wandb:
+            run = wandb.init(
+                project='sketchrnn-pytorch',
+                entity='andrewlook',
+                config=config,
+            )
+            self.run_id = run.id
+        else:
+            self.run_id = f"{math.floor(np.random.rand() * 1e6):07d}"
+
         self.models_dir = Path(models_dir)
-        self.run_id = run_id
-        self.run_dir = self.models_dir / run_id
+        self.run_dir = self.models_dir / self.run_id
         if not os.path.isdir(self.run_dir):
             os.makedirs(self.run_dir)
+        
         # Initialize encoder & decoder
         self.encoder = EncoderRNN(self.hp.d_z, self.hp.enc_hidden_size).to(self.device)
         self.decoder = DecoderRNN(self.hp.d_z, self.hp.dec_hidden_size, self.hp.n_distributions).to(self.device)
+        if self.use_wandb:
+            wandb.watch((self.encoder, self.decoder), log="all", log_freq=10, log_graph=True)
 
         self.encoder_optimizer = optim.Adam(self.encoder.parameters(), self.hp.learning_rate)
         self.decoder_optimizer = optim.Adam(self.decoder.parameters(), self.hp.learning_rate)
@@ -558,14 +576,7 @@ class Trainer():
         # `mask` will have shape `[seq_len, batch_size]`.
         data = batch[0].to(self.device).transpose(0, 1)
         mask = batch[1].to(self.device).transpose(0, 1)
-
         batch_items = len(data)
-
-        # # Increment step in training mode
-        # if is_training:
-        #     print("add global step...")
-        #     self.total_steps += 1
-        #     self.total_items += batch_items
         
         # Get $z$, $\mu$, and $\hat{\sigma}$
         z, mu, sigma_hat = self.encoder(data)
@@ -618,16 +629,19 @@ class Trainer():
         avg_reconstruction_loss = total_reconstruction_loss / total_items
         avg_kl_loss = total_kl_loss / total_items
 
+        if self.use_wandb:
+            wandb.log(dict(val_avg_loss=avg_loss), step=self.total_steps)
+
         return avg_loss, avg_reconstruction_loss, avg_kl_loss
 
-    def train_one_epoch(self, epoch, use_wandb=False):
+    def train_one_epoch(self, epoch):
         steps_per_epoch = len(self.train_loader)
         for idx, batch in enumerate(iter(self.train_loader)):
             step_num = idx + epoch * steps_per_epoch
             self.total_steps = step_num
             loss, reconstruction_loss, kl_loss, batch_items = self.step(batch, is_training=True)
-            print(f"epoch {epoch} - batch {idx} - step_num {step_num} -- loss {loss}")
-            if use_wandb:
+            #print(f"epoch {epoch} - batch {idx} - step_num {step_num} -- loss {loss}")
+            if self.use_wandb:
                 log_values = dict(loss=loss, reconstruction_loss=reconstruction_loss, kl_loss=kl_loss, batch_items=batch_items)
                 wandb.log(log_values, step=step_num)
 
@@ -670,33 +684,22 @@ class Trainer():
 def main():
     hp = HParams()
     hp.learning_rate = 1e-3
-    hp.use_wandb = False
-    run_id = f"{math.floor(np.random.rand() * 1e6):07d}"
-
+    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    trainer = Trainer(hp=hp, run_id=run_id, device=device)
+    trainer = Trainer(hp=hp,
+                      device=device,
+                      use_wandb=True)
     
-    config = hp.__dict__
-    config['architecture'] = 'Pytorch-LabML'
-    config['local_run_id'] = run_id
-    print(config)
-    
-    if hp.use_wandb:
-        wandb.init(
-            project='sketchrnn-pytorch',
-            entity='andrewlook',
-            config=config,
-        )
-        wandb.watch((trainer.encoder, trainer.decoder), log="all", log_freq=10, log_graph=True)
+    validate_every_n_epochs = 2
+    save_every_n_epochs = 10
 
     for epoch in range(hp.epochs):
         print(f"epoch {epoch}")
-        trainer.train_one_epoch(epoch=epoch, use_wandb=hp.use_wandb)
-        if epoch % 5 == 0:
+        trainer.train_one_epoch(epoch=epoch)
+        if epoch % validate_every_n_epochs == 0:
             avg_loss, avg_reconstruction_loss, avg_kl_loss = trainer.validate_one_epoch()
             print(f"VALIDATION - EPOCH {epoch} - STEP {trainer.total_steps} - VAL_AVG_LOSS: {avg_loss}")
-            if hp.use_wandb:
-                wandb.log(dict(val_avg_loss=avg_loss), step=trainer.total_steps)
+        if epoch % save_every_n_epochs == 0:
             trainer.save(epoch)
             trainer.sample(epoch)
         
