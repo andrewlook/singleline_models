@@ -40,6 +40,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import wandb
+from fastprogress.fastprogress import master_bar, progress_bar
 from matplotlib import pyplot as plt
 from PIL import Image
 from torch import optim
@@ -634,9 +635,11 @@ class Trainer():
 
         return avg_loss, avg_reconstruction_loss, avg_kl_loss
 
-    def train_one_epoch(self, epoch):
+    def train_one_epoch(self, epoch, parent_progressbar=None):
         steps_per_epoch = len(self.train_loader)
-        for idx, batch in enumerate(iter(self.train_loader)):
+        for idx, batch in enumerate(progress_bar(iter(self.train_loader), parent=parent_progressbar)):
+            if idx > 10:
+                break
             step_num = idx + epoch * steps_per_epoch
             self.total_steps = step_num
             loss, reconstruction_loss, kl_loss, batch_items = self.step(batch, is_training=True)
@@ -644,6 +647,21 @@ class Trainer():
             if self.use_wandb:
                 log_values = dict(loss=loss, reconstruction_loss=reconstruction_loss, kl_loss=kl_loss, batch_items=batch_items)
                 wandb.log(log_values, step=step_num)
+
+    def train(self):
+        validate_every_n_epochs = 2
+        save_every_n_epochs = 10
+
+        mb = master_bar(range(self.hp.epochs))
+        for epoch in mb:
+            self.train_one_epoch(epoch=epoch, parent_progressbar=mb)
+            mb.write(f'Finished epoch {epoch}.')
+            if epoch % validate_every_n_epochs == 0:
+                avg_loss, *_ = self.validate_one_epoch()
+                #print(f"VALIDATION - EPOCH {epoch} - STEP {trainer.total_steps} - VAL_AVG_LOSS: {avg_loss}")
+            if epoch % save_every_n_epochs == 0:
+                self.save(epoch)
+                self.sample(epoch)
 
     def sample(self, epoch, display=False):
         orig_paths = []
@@ -691,19 +709,7 @@ def main():
     trainer = Trainer(hp=hp,
                       device=device,
                       use_wandb=use_wandb)
-    
-    validate_every_n_epochs = 2
-    save_every_n_epochs = 10
-
-    for epoch in range(hp.epochs):
-        print(f"epoch {epoch}")
-        trainer.train_one_epoch(epoch=epoch)
-        if epoch % validate_every_n_epochs == 0:
-            avg_loss, *_ = trainer.validate_one_epoch()
-            print(f"VALIDATION - EPOCH {epoch} - STEP {trainer.total_steps} - VAL_AVG_LOSS: {avg_loss}")
-        if epoch % save_every_n_epochs == 0:
-            trainer.save(epoch)
-            trainer.sample(epoch)
+    trainer.train()
         
 
 if __name__ == "__main__":
