@@ -467,7 +467,7 @@ class Sampler:
 
 class HParams():
     architecture = 'Pytorch-LabML'
-    dataset_name: str = 'look_i16'
+    dataset_name: str = 'look_i16__minn10_epsilon1'
     epochs = 50000
 
     learning_rate = 1e-3
