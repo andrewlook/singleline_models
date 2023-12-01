@@ -439,7 +439,7 @@ class Sampler:
         # Take the cumulative sums of $(\Delta x, \Delta y)$ to get $(x, y)$
         seq[:, 0:2] = torch.cumsum(_seq[:, 0:2], dim=0)
         # Create a new numpy array of the form $(x, y, q_2)$
-        seq[:, 2] = seq[:, 3]
+        seq[:, 2] = _seq[:, 3]
         seq = seq[:, 0:3].detach().cpu().numpy()
 
         # Split the array at points where $q_2$ is $1$.
