@@ -467,8 +467,8 @@ class Sampler:
 
 class HParams():
     architecture = 'Pytorch-LabML'
-
-    dataset_name: str = 'cat'
+    dataset_name: str = 'look_i16'
+    epochs = 50000
 
     learning_rate = 1e-3
     
@@ -493,8 +493,6 @@ class HParams():
 
     # Filter out stroke sequences longer than $200$
     max_seq_length = 200
-
-    epochs = 100
 
 
 class Trainer():
@@ -631,7 +629,12 @@ class Trainer():
         avg_kl_loss = total_kl_loss / total_items
 
         if self.use_wandb:
-            wandb.log(dict(val_avg_loss=avg_loss), step=self.total_steps)
+            validation_losses = dict(
+                val_avg_loss=avg_loss,
+                val_avg_reconstruction_loss=avg_reconstruction_loss,
+                val_avg_kl_loss=avg_kl_loss
+            )
+            wandb.log(validation_losses, step=self.total_steps)
 
         return avg_loss, avg_reconstruction_loss, avg_kl_loss
 
@@ -643,12 +646,12 @@ class Trainer():
             loss, reconstruction_loss, kl_loss, batch_items = self.step(batch, is_training=True)
             #print(f"epoch {epoch} - batch {idx} - step_num {step_num} -- loss {loss}")
             if self.use_wandb:
-                log_values = dict(loss=loss, reconstruction_loss=reconstruction_loss, kl_loss=kl_loss, batch_items=batch_items)
+                log_values = dict(loss=loss, reconstruction_loss=reconstruction_loss, kl_loss=kl_loss)
                 wandb.log(log_values, step=step_num)
 
     def train(self):
         validate_every_n_epochs = 2
-        save_every_n_epochs = 10
+        save_every_n_epochs = 100
 
         mb = master_bar(range(self.hp.epochs))
         for epoch in mb:
