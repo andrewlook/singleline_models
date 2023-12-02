@@ -30,7 +30,11 @@ class HParams():
     validate_every_n_epochs = 2
     save_every_n_epochs = 100
 
-    learning_rate = 1e-3
+    # adaptive learning rate
+    lr = 1e-3
+    use_lr_decay = False
+    min_lr = 1e-5
+    lr_decay = 0.9999
     
     # Encoder and decoder sizes
     enc_hidden_size = 256
@@ -56,6 +60,14 @@ class HParams():
 
     def __dict__(self):
         return {k: getattr(self, k) for k in self.__dir__() if not k.startswith('__')}
+
+
+def lr_decay(optimizer, min_lr, lr_decay):
+    """Decay learning rate by a factor of lr_decay"""
+    for param_group in optimizer.param_groups:
+        if param_group['lr'] > min_lr:
+            param_group['lr'] *= lr_decay
+    return optimizer
 
 
 class Trainer():
@@ -120,7 +132,7 @@ class Trainer():
             wandb.watch((self.encoder, self.decoder), log="all", log_freq=10, log_graph=True)
 
         # store learning rate as state, so it can be modified by LR decay
-        self.learning_rate = self.hp.learning_rate
+        self.learning_rate = self.hp.lr
         self.encoder_optimizer = optim.Adam(self.encoder.parameters(), self.learning_rate)
         self.decoder_optimizer = optim.Adam(self.decoder.parameters(), self.learning_rate)
 
@@ -258,6 +270,9 @@ class Trainer():
                     kl_loss=kl_loss,
                     learning_rate=self.learning_rate,
                     epoch=epoch), step=self.total_steps)
+            if self.hp.use_lr_decay:
+                self.encoder_optimizer = lr_decay(self.encoder_optimizer, self.hp.min_lr, self.hp.lr_decay)
+                self.decoder_optimizer = lr_decay(self.decoder_optimizer, self.hp.min_lr, self.hp.lr_decay)
 
     def train(self):
         mb = master_bar(range(self.hp.epochs))
