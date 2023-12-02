@@ -99,8 +99,11 @@ class Trainer():
             # use wandb's run ID, if available, so checkpoints match W&B's dashboard ID
             self.run_id = run.id
 
-        print(f"\n{'-'*40}\nRUN_ID: {self.run_id}")
-        print(f"HYPERPARAMETERS:\n\n{json.dumps(hp.__dict__(), indent=2)}\n{'-'*40}")
+        print('='*60)
+        print(f"RUN_ID: {self.run_id}\n")
+        print(f"HYPERPARAMETERS:\n")
+        print(json.dumps(hp.__dict__(), indent=2))
+        print('='*60 + '\n\n')
 
         self.models_dir = Path(models_dir)
         self.run_dir = self.models_dir / self.run_id
