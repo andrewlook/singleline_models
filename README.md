@@ -30,9 +30,8 @@ All data is stored in stroke-3 format, meaning a list with three columns:
 ## Improvements
 
 - [x] Log epoch and learning rate
-
-- [ ] LR decay
-- [ ] ETA decay (for KL loss)
+- [x] LR decay
+- [x] ETA decay (for KL loss)
 
 - [ ] Dropout
 - [ ] Layer Normalization

@@ -51,6 +51,11 @@ class HParams():
 
     # Weight of KL divergence loss, $w_{KL}$
     kl_div_loss_weight = 0.5
+    # decaying weight of KL loss
+    use_eta = False
+    eta_min = 1e-2
+    eta_R = 0.99995
+
     # Gradient clipping
     grad_clip = 1.
     # Temperature $\tau$ for sampling
@@ -137,6 +142,8 @@ class Trainer():
         self.encoder_optimizer = optim.Adam(self.encoder.parameters(), self.learning_rate)
         self.decoder_optimizer = optim.Adam(self.decoder.parameters(), self.learning_rate)
 
+        self.eta_step = self.hp.eta_min if self.hp.use_eta else 1
+
         # `npz` file path is `data/quickdraw/[DATASET NAME].npz`
         base_path = Path(f"data/{self.hp.dataset_source}")
         path = base_path / f'{self.hp.dataset_name}.npz'
@@ -221,6 +228,9 @@ class Trainer():
 
         # $L_{KL}$
         kl_loss = self.kl_div_loss(sigma_hat, mu)
+        if self.hp.use_eta:
+            kl_loss *= self.eta_step
+
         # $L_R$
         reconstruction_loss = self.reconstruction_loss(mask, data[1:], dist, q_logits)
         # $Loss = L_R + w_{KL} L_{KL}$
@@ -273,9 +283,13 @@ class Trainer():
                 kl_loss=kl_loss,
                 learning_rate=self.learning_rate,
                 epoch=epoch))
-            if self.hp.use_lr_decay:
-                self.encoder_optimizer = lr_decay(self.encoder_optimizer, self.hp.min_lr, self.hp.lr_decay)
-                self.decoder_optimizer = lr_decay(self.decoder_optimizer, self.hp.min_lr, self.hp.lr_decay)
+        # update learning rate, if use_lr_decay is enabled
+        if self.hp.use_lr_decay:
+            self.encoder_optimizer = lr_decay(self.encoder_optimizer, self.hp.min_lr, self.hp.lr_decay)
+            self.decoder_optimizer = lr_decay(self.decoder_optimizer, self.hp.min_lr, self.hp.lr_decay)
+        # update weight of KL loss, if use_eta is enabled
+        if self.hp.use_eta:
+            self.eta_step = 1-(1-self.hp.eta_min)*self.hp.eta_R
 
     def train(self):
         mb = master_bar(range(self.hp.epochs))
