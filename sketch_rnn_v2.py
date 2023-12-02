@@ -481,9 +481,16 @@ class Sampler:
 
 
 class HParams():
-    architecture = 'Pytorch-LabML'
+    architecture = 'Pytorch-SketchRNN'
+
+    dataset_source: str = 'look'
     dataset_name: str = 'look_i16__minn10_epsilon1'
+
+    # duration of training run
     epochs = 50000
+    # how often to compute validation metrics / persist / sample
+    validate_every_n_epochs = 2
+    save_every_n_epochs = 100
 
     learning_rate = 1e-3
     
@@ -509,6 +516,9 @@ class HParams():
     # Filter out stroke sequences longer than $200$
     max_seq_length = 200
 
+    def __dict__(self):
+        return {k: getattr(self, k) for k in self.__dir__() if not k.startswith('__')}
+
 
 class Trainer():
     # Device configurations to pick the device to run the experiment
@@ -531,26 +541,27 @@ class Trainer():
 
     def __init__(self, hp: HParams, device="cuda", use_wandb=False, models_dir="models"):
         self.hp = hp
-        config = {k: getattr(hp, k) for k in hp.__dir__() if not k.startswith('__')}
-        print(config)
-
         self.device = device
         self.use_wandb = use_wandb
         
+        # create a unique run ID, to distinguish saved model checkpoints / sample images
+        self.run_id = f"{math.floor(np.random.rand() * 1e6):07d}"
         if self.use_wandb:
             run = wandb.init(
                 project='sketchrnn-pytorch',
                 entity='andrewlook',
-                config=config,
+                config=hp.__dict__(),
             )
+            # use wandb's run ID, if available, so checkpoints match W&B's dashboard ID
             self.run_id = run.id
-        else:
-            self.run_id = f"{math.floor(np.random.rand() * 1e6):07d}"
 
         self.models_dir = Path(models_dir)
         self.run_dir = self.models_dir / self.run_id
         if not os.path.isdir(self.run_dir):
             os.makedirs(self.run_dir)
+
+        # Initialize step count, to be updated in the training loop
+        self.total_steps = 0
         
         # Initialize encoder & decoder
         self.encoder = EncoderRNN(self.hp.d_z, self.hp.enc_hidden_size).to(self.device)
@@ -558,15 +569,18 @@ class Trainer():
         if self.use_wandb:
             wandb.watch((self.encoder, self.decoder), log="all", log_freq=10, log_graph=True)
 
+        # store learning rate as state, so it can be modified by LR decay
         self.learning_rate = self.hp.learning_rate
         self.encoder_optimizer = optim.Adam(self.encoder.parameters(), self.learning_rate)
         self.decoder_optimizer = optim.Adam(self.decoder.parameters(), self.learning_rate)
 
         # Create sampler
         self.sampler = Sampler(self.encoder, self.decoder)
+        # Pick 5 indices from the validation dataset, so the sampling can be compared across epochs
+        self.valid_idxs = [np.random.choice(len(self.valid_dataset)) for _ in range(5)]
 
         # `npz` file path is `data/quickdraw/[DATASET NAME].npz`
-        base_path = Path("data/quickdraw")
+        base_path = Path(f"data/{self.hp.dataset_source}")
         path = base_path / f'{self.hp.dataset_name}.npz'
         # Load the numpy file
         dataset = np.load(str(path), encoding='latin1', allow_pickle=True)
@@ -580,9 +594,7 @@ class Trainer():
         self.train_loader = DataLoader(self.train_dataset, self.hp.batch_size, shuffle=True)
         # Create validation data loader
         self.valid_loader = DataLoader(self.valid_dataset, self.hp.batch_size)
-
-        self.total_steps = 0
-        self.valid_idxs = [np.random.choice(len(self.valid_dataset)) for _ in range(5)]
+        
 
     def step(self, batch: Any, is_training=False):
         self.encoder.train(is_training)
@@ -618,7 +630,6 @@ class Trainer():
             self.decoder_optimizer.zero_grad()
             # Compute gradients
             loss.backward()
-            
             # Clip gradients
             nn.utils.clip_grad_norm_(self.encoder.parameters(), self.hp.grad_clip)
             nn.utils.clip_grad_norm_(self.decoder.parameters(), self.hp.grad_clip)
@@ -628,62 +639,50 @@ class Trainer():
         return loss, reconstruction_loss, kl_loss, batch_items
 
     def validate_one_epoch(self, epoch):
-        total_items = 0
-        total_loss = 0
-        total_kl_loss = 0
-        total_reconstruction_loss = 0
-
+        total_items, total_loss, total_kl_loss, total_reconstruction_loss = 0, 0, 0, 0
         with torch.no_grad():    
-            for idx, batch in enumerate(iter(self.valid_loader)):
+            for batch in iter(self.valid_loader):
                 loss, reconstruction_loss, kl_loss, batch_items = self.step(batch, is_training=False)
 
-                total_items += batch_items
                 total_loss += loss.item() * batch_items
                 total_reconstruction_loss += reconstruction_loss.item() * batch_items
                 total_kl_loss += kl_loss.item() * batch_items
-
+                total_items += batch_items
+                
         avg_loss = total_loss / total_items
         avg_reconstruction_loss = total_reconstruction_loss / total_items
         avg_kl_loss = total_kl_loss / total_items
 
         if self.use_wandb:
-            validation_losses = dict(
+            wandb.log(dict(
                 val_avg_loss=avg_loss,
                 val_avg_reconstruction_loss=avg_reconstruction_loss,
                 val_avg_kl_loss=avg_kl_loss,
-                epoch=epoch,
-            )
-            wandb.log(validation_losses, step=self.total_steps)
+                epoch=epoch), step=self.total_steps)
 
         return avg_loss, avg_reconstruction_loss, avg_kl_loss
 
     def train_one_epoch(self, epoch, parent_progressbar=None):
         steps_per_epoch = len(self.train_loader)
         for idx, batch in enumerate(progress_bar(iter(self.train_loader), parent=parent_progressbar)):
-            step_num = idx + epoch * steps_per_epoch
-            self.total_steps = step_num
-            loss, reconstruction_loss, kl_loss, batch_items = self.step(batch, is_training=True)
+            self.total_steps = idx + epoch * steps_per_epoch
+            loss, reconstruction_loss, kl_loss, _ = self.step(batch, is_training=True)
             if self.use_wandb:
-                log_values = dict(
+                wandb.log(dict(
                     loss=loss,
                     reconstruction_loss=reconstruction_loss,
                     kl_loss=kl_loss,
                     learning_rate=self.learning_rate,
-                    epoch=epoch,
-                )
-                wandb.log(log_values, step=step_num)
+                    epoch=epoch), step=self.total_steps)
 
     def train(self):
-        validate_every_n_epochs = 2
-        save_every_n_epochs = 100
-
         mb = master_bar(range(self.hp.epochs))
         for epoch in mb:
             self.train_one_epoch(epoch=epoch, parent_progressbar=mb)
             mb.write(f'Finished epoch {epoch}.')
-            if epoch % validate_every_n_epochs == 0:
+            if epoch % self.hp.validate_every_n_epochs == 0:
                 self.validate_one_epoch(epoch)
-            if epoch % save_every_n_epochs == 0:
+            if epoch % self.hp.save_every_n_epochs == 0:
                 self.save(epoch)
                 self.sample(epoch)
 
@@ -691,8 +690,8 @@ class Trainer():
         orig_paths = []
         decoded_paths = []
         for idx in self.valid_idxs:
-            orig_path = self.run_dir / f'sample_runid-{self.run_id}_{idx:04d}_epoch_{epoch:05d}_orig.png'
-            decoded_path = self.run_dir / f'sample_runid-{self.run_id}_{idx:04d}_epoch_{epoch:05d}_decoded.png'
+            orig_path = self.run_dir / f'runid-{self.run_id}_epoch-{epoch:05d}_sample-{idx:04d}_orig.png'
+            decoded_path = self.run_dir / f'runid-{self.run_id}_epoch-{epoch:05d}_sample-{idx:04d}_decoded.png'
 
             # Randomly pick a sample from validation dataset to encoder
             data, *_ = self.valid_dataset[idx]
@@ -712,27 +711,26 @@ class Trainer():
     
     def save(self, epoch):
         torch.save(self.encoder.state_dict(), \
-            Path(self.run_dir) / f'encoderRNN_runid-{self.run_id}_epoch_{epoch:05d}.pth')
+            Path(self.run_dir) / f'runid-{self.run_id}_epoch-{epoch:05d}_encoderRNN.pth')
         torch.save(self.decoder.state_dict(), \
-            Path(self.run_dir) / f'decoderRNN_runid-{self.run_id}epoch_{epoch:05d}.pth')
+            Path(self.run_dir) / f'runid-{self.run_id}_epoch-{epoch:05d}_decoderRNN.pth')
 
     def load(self, epoch):
-        saved_encoder = torch.load(Path(self.run_dir) / f'encoderRNN_runid-{self.run_id}_epoch_{epoch:05d}.pth')
-        saved_decoder = torch.load(Path(self.run_dir) / f'decoderRNN_runid-{self.run_id}_epoch_{epoch:05d}.pth')
+        saved_encoder = torch.load(Path(self.run_dir) / f'runid-{self.run_id}_epoch-{epoch:05d}_encoderRNN.pth')
+        saved_decoder = torch.load(Path(self.run_dir) / f'runid-{self.run_id}_epoch-{epoch:05d}_decoderRNN.pth')
         self.encoder.load_state_dict(saved_encoder)
         self.decoder.load_state_dict(saved_decoder)
 
 
 def main():
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     use_wandb = False
 
     hp = HParams()
-    hp.learning_rate = 1e-3
+    hp.learning_rate = 1e-3    
     
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    trainer = Trainer(hp=hp,
-                      device=device,
-                      use_wandb=use_wandb)
+    trainer = Trainer(hp=hp, device=device, use_wandb=use_wandb)
     trainer.train()
         
 
