@@ -25,3 +25,4 @@ All data is stored in stroke-3 format, meaning a list with three columns:
 - [Annotated Sketch RNN in PyTorch](https://nn.labml.ai/sketch_rnn/index.html) by [LabML](https://nn.labml.ai/)
 - [Tensorflow SketchRNN](https://github.com/magenta/magenta/blob/main/magenta/models/sketch_rnn/README.md) by [Magenta Team](https://magenta.tensorflow.org/) and [David Ha](https://github.com/hardmaru)
 - [sketch-rnn-datasets](https://github.com/hardmaru/sketch-rnn-datasets) by [David Ha](https://github.com/hardmaru)
+- [SketchRNN-Pytorch](https://github.com/OhataKenji/SketchRNN-Pytorch) by [OhataKenji](https://github.com/OhataKenji)
