@@ -574,11 +574,6 @@ class Trainer():
         self.encoder_optimizer = optim.Adam(self.encoder.parameters(), self.learning_rate)
         self.decoder_optimizer = optim.Adam(self.decoder.parameters(), self.learning_rate)
 
-        # Create sampler
-        self.sampler = Sampler(self.encoder, self.decoder)
-        # Pick 5 indices from the validation dataset, so the sampling can be compared across epochs
-        self.valid_idxs = [np.random.choice(len(self.valid_dataset)) for _ in range(5)]
-
         # `npz` file path is `data/quickdraw/[DATASET NAME].npz`
         base_path = Path(f"data/{self.hp.dataset_source}")
         path = base_path / f'{self.hp.dataset_name}.npz'
@@ -594,6 +589,11 @@ class Trainer():
         self.train_loader = DataLoader(self.train_dataset, self.hp.batch_size, shuffle=True)
         # Create validation data loader
         self.valid_loader = DataLoader(self.valid_dataset, self.hp.batch_size)
+
+        # Create sampler
+        self.sampler = Sampler(self.encoder, self.decoder)
+        # Pick 5 indices from the validation dataset, so the sampling can be compared across epochs
+        self.valid_idxs = [np.random.choice(len(self.valid_dataset)) for _ in range(5)]
         
 
     def step(self, batch: Any, is_training=False):
@@ -723,14 +723,14 @@ class Trainer():
 
 
 def main():
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    use_wandb = False
-
     hp = HParams()
-    hp.learning_rate = 1e-3    
+    hp.learning_rate = 1e-3
+
+    hp.save_every_n_epochs = 1
+    hp.validate_every_n_epochs = 1
     
-    trainer = Trainer(hp=hp, device=device, use_wandb=use_wandb)
+    trainer = Trainer(hp=hp, use_wandb=False,
+                      device=torch.device("cuda" if torch.cuda.is_available() else "cpu"))
     trainer.train()
         
 
