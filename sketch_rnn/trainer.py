@@ -2,6 +2,7 @@ import json
 import math
 import os
 from pathlib import Path
+from pprint import pprint
 from typing import Any
 
 import numpy as np
@@ -168,6 +169,12 @@ class Trainer():
         saved_decoder = torch.load(Path(self.run_dir) / f'runid-{self.run_id}_epoch-{epoch:05d}_decoderRNN.pth')
         self.encoder.load_state_dict(saved_encoder)
         self.decoder.load_state_dict(saved_decoder)
+    
+    def log(self, metrics):
+        if self.use_wandb:
+            wandb.log(metrics, step=self.total_steps)
+        else:
+            pprint({'step': self.total_steps, **metrics})
 
     def sample(self, epoch, display=False):
         orig_paths = []
@@ -232,7 +239,7 @@ class Trainer():
             # Optimize
             self.encoder_optimizer.step()
             self.decoder_optimizer.step()
-        return loss, reconstruction_loss, kl_loss, batch_items
+        return loss.item(), reconstruction_loss.item(), kl_loss.item(), batch_items
 
     def validate_one_epoch(self, epoch):
         total_items, total_loss, total_kl_loss, total_reconstruction_loss = 0, 0, 0, 0
@@ -248,14 +255,11 @@ class Trainer():
         avg_loss = total_loss / total_items
         avg_reconstruction_loss = total_reconstruction_loss / total_items
         avg_kl_loss = total_kl_loss / total_items
-
-        if self.use_wandb:
-            wandb.log(dict(
-                val_avg_loss=avg_loss,
-                val_avg_reconstruction_loss=avg_reconstruction_loss,
-                val_avg_kl_loss=avg_kl_loss,
-                epoch=epoch), step=self.total_steps)
-
+        self.log(dict(
+            val_avg_loss=avg_loss,
+            val_avg_reconstruction_loss=avg_reconstruction_loss,
+            val_avg_kl_loss=avg_kl_loss,
+            epoch=epoch))
         return avg_loss, avg_reconstruction_loss, avg_kl_loss
 
     def train_one_epoch(self, epoch, parent_progressbar=None):
@@ -263,13 +267,12 @@ class Trainer():
         for idx, batch in enumerate(progress_bar(iter(self.train_loader), parent=parent_progressbar)):
             self.total_steps = idx + epoch * steps_per_epoch
             loss, reconstruction_loss, kl_loss, _ = self.step(batch, is_training=True)
-            if self.use_wandb:
-                wandb.log(dict(
-                    loss=loss,
-                    reconstruction_loss=reconstruction_loss,
-                    kl_loss=kl_loss,
-                    learning_rate=self.learning_rate,
-                    epoch=epoch), step=self.total_steps)
+            self.log(dict(
+                loss=loss,
+                reconstruction_loss=reconstruction_loss,
+                kl_loss=kl_loss,
+                learning_rate=self.learning_rate,
+                epoch=epoch))
             if self.hp.use_lr_decay:
                 self.encoder_optimizer = lr_decay(self.encoder_optimizer, self.hp.min_lr, self.hp.lr_decay)
                 self.decoder_optimizer = lr_decay(self.decoder_optimizer, self.hp.min_lr, self.hp.lr_decay)
@@ -278,9 +281,9 @@ class Trainer():
         mb = master_bar(range(self.hp.epochs))
         for epoch in mb:
             self.train_one_epoch(epoch=epoch, parent_progressbar=mb)
-            mb.write(f'Finished epoch {epoch}.')
             if epoch % self.hp.validate_every_n_epochs == 0:
                 self.validate_one_epoch(epoch)
             if epoch % self.hp.save_every_n_epochs == 0:
                 self.save(epoch)
                 self.sample(epoch)
+            mb.write(f'Finished epoch {epoch}.')
