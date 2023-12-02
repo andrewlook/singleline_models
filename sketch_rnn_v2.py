@@ -25,9 +25,24 @@ This code is configured to use `bicycle` dataset.
 You can change this in configurations.
 
 ### Acknowledgements
-Took help from [PyTorch Sketch RNN](https://github.com/alexis-jacq/Pytorch-Sketch-RNN) project by
-[Alexis David Jacq](https://github.com/alexis-jacq)
+- [PyTorch Sketch RNN](https://github.com/alexis-jacq/Pytorch-Sketch-RNN) project by [Alexis David Jacq](https://github.com/alexis-jacq)
+
+
+
+### Improvements
+
+- [ ] Log epoch and learning rate
+
+- [ ] LR decay
+- [ ] ETA decay (for KL loss)
+
+- [ ] Dropout
+- [ ] Layer Normalization
+- [ ] Recurrent Dropout
+
+
 """
+
 
 import io
 import math
@@ -512,6 +527,8 @@ class Trainer():
     kl_div_loss = KLDivLoss()
     reconstruction_loss = ReconstructionLoss()
 
+    learning_rate: float
+
     def __init__(self, hp: HParams, device="cuda", use_wandb=False, models_dir="models"):
         self.hp = hp
         config = {k: getattr(hp, k) for k in hp.__dir__() if not k.startswith('__')}
@@ -541,8 +558,9 @@ class Trainer():
         if self.use_wandb:
             wandb.watch((self.encoder, self.decoder), log="all", log_freq=10, log_graph=True)
 
-        self.encoder_optimizer = optim.Adam(self.encoder.parameters(), self.hp.learning_rate)
-        self.decoder_optimizer = optim.Adam(self.decoder.parameters(), self.hp.learning_rate)
+        self.learning_rate = self.hp.learning_rate
+        self.encoder_optimizer = optim.Adam(self.encoder.parameters(), self.learning_rate)
+        self.decoder_optimizer = optim.Adam(self.decoder.parameters(), self.learning_rate)
 
         # Create sampler
         self.sampler = Sampler(self.encoder, self.decoder)
@@ -609,7 +627,7 @@ class Trainer():
             self.decoder_optimizer.step()
         return loss, reconstruction_loss, kl_loss, batch_items
 
-    def validate_one_epoch(self):
+    def validate_one_epoch(self, epoch):
         total_items = 0
         total_loss = 0
         total_kl_loss = 0
@@ -632,7 +650,8 @@ class Trainer():
             validation_losses = dict(
                 val_avg_loss=avg_loss,
                 val_avg_reconstruction_loss=avg_reconstruction_loss,
-                val_avg_kl_loss=avg_kl_loss
+                val_avg_kl_loss=avg_kl_loss,
+                epoch=epoch,
             )
             wandb.log(validation_losses, step=self.total_steps)
 
@@ -644,9 +663,14 @@ class Trainer():
             step_num = idx + epoch * steps_per_epoch
             self.total_steps = step_num
             loss, reconstruction_loss, kl_loss, batch_items = self.step(batch, is_training=True)
-            #print(f"epoch {epoch} - batch {idx} - step_num {step_num} -- loss {loss}")
             if self.use_wandb:
-                log_values = dict(loss=loss, reconstruction_loss=reconstruction_loss, kl_loss=kl_loss)
+                log_values = dict(
+                    loss=loss,
+                    reconstruction_loss=reconstruction_loss,
+                    kl_loss=kl_loss,
+                    learning_rate=self.learning_rate,
+                    epoch=epoch,
+                )
                 wandb.log(log_values, step=step_num)
 
     def train(self):
@@ -658,8 +682,7 @@ class Trainer():
             self.train_one_epoch(epoch=epoch, parent_progressbar=mb)
             mb.write(f'Finished epoch {epoch}.')
             if epoch % validate_every_n_epochs == 0:
-                avg_loss, *_ = self.validate_one_epoch()
-                #print(f"VALIDATION - EPOCH {epoch} - STEP {trainer.total_steps} - VAL_AVG_LOSS: {avg_loss}")
+                self.validate_one_epoch(epoch)
             if epoch % save_every_n_epochs == 0:
                 self.save(epoch)
                 self.sample(epoch)
@@ -668,8 +691,8 @@ class Trainer():
         orig_paths = []
         decoded_paths = []
         for idx in self.valid_idxs:
-            orig_path = self.run_dir / f'sample_{idx:04d}_epoch_{epoch:05d}_orig.png'
-            decoded_path = self.run_dir / f'sample_{idx:04d}_epoch_{epoch:05d}_decoded.png'
+            orig_path = self.run_dir / f'sample_runid-{self.run_id}_{idx:04d}_epoch_{epoch:05d}_orig.png'
+            decoded_path = self.run_dir / f'sample_runid-{self.run_id}_{idx:04d}_epoch_{epoch:05d}_decoded.png'
 
             # Randomly pick a sample from validation dataset to encoder
             data, *_ = self.valid_dataset[idx]
@@ -689,13 +712,13 @@ class Trainer():
     
     def save(self, epoch):
         torch.save(self.encoder.state_dict(), \
-            Path(self.run_dir) / f'encoderRNN_epoch_{epoch:05d}.pth')
+            Path(self.run_dir) / f'encoderRNN_runid-{self.run_id}_epoch_{epoch:05d}.pth')
         torch.save(self.decoder.state_dict(), \
-            Path(self.run_dir) / f'decoderRNN_epoch_{epoch:05d}.pth')
+            Path(self.run_dir) / f'decoderRNN_runid-{self.run_id}epoch_{epoch:05d}.pth')
 
     def load(self, epoch):
-        saved_encoder = torch.load(Path(self.run_dir) / f'encoderRNN_epoch_{epoch:05d}.pth')
-        saved_decoder = torch.load(Path(self.run_dir) / f'decoderRNN_epoch_{epoch:05d}.pth')
+        saved_encoder = torch.load(Path(self.run_dir) / f'encoderRNN_runid-{self.run_id}_epoch_{epoch:05d}.pth')
+        saved_decoder = torch.load(Path(self.run_dir) / f'decoderRNN_runid-{self.run_id}_epoch_{epoch:05d}.pth')
         self.encoder.load_state_dict(saved_encoder)
         self.decoder.load_state_dict(saved_decoder)
 
