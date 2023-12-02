@@ -45,6 +45,7 @@ You can change this in configurations.
 
 
 import io
+import json
 import math
 import os
 from pathlib import Path
@@ -554,6 +555,8 @@ class Trainer():
             )
             # use wandb's run ID, if available, so checkpoints match W&B's dashboard ID
             self.run_id = run.id
+        print(f"RUN_ID: {self.run_id}")
+        print(f"HYPERPARAMETERS:\n{'-'*40}\n{json.dumps(hp.__dict__())}\n{'-'*40}")
 
         self.models_dir = Path(models_dir)
         self.run_dir = self.models_dir / self.run_id
@@ -725,10 +728,6 @@ class Trainer():
 def main():
     hp = HParams()
     hp.learning_rate = 1e-3
-
-    hp.save_every_n_epochs = 1
-    hp.validate_every_n_epochs = 1
-    
     trainer = Trainer(hp=hp, use_wandb=False,
                       device=torch.device("cuda" if torch.cuda.is_available() else "cpu"))
     trainer.train()
