@@ -6,32 +6,10 @@ summary: >
   Sketch RNN is a sequence-to-sequence model that generates sketches of objects such as bicycles, cats, etc.
 ---
 
-# Sketch RNN
-
-This is an annotated [PyTorch](https://pytorch.org) implementation of the paper
-[A Neural Representation of Sketch Drawings](https://arxiv.org/abs/1704.03477).
-
-Sketch RNN is a sequence-to-sequence variational auto-encoder.
-Both encoder and decoder are recurrent neural network models.
-It learns to reconstruct stroke based simple drawings, by predicting
-a series of strokes.
-Decoder predicts each stroke as a mixture of Gaussian's.
-
-### Getting data
-Download data from [Quick, Draw! Dataset](https://github.com/googlecreativelab/quickdraw-dataset).
-There is a link to download `npz` files in *Sketch-RNN QuickDraw Dataset* section of the readme.
-Place the downloaded `npz` file(s) in `data/sketch` folder.
-This code is configured to use `bicycle` dataset.
-You can change this in configurations.
-
-### Acknowledgements
-- [PyTorch Sketch RNN](https://github.com/alexis-jacq/Pytorch-Sketch-RNN) project by [Alexis David Jacq](https://github.com/alexis-jacq)
-
-
 
 ### Improvements
 
-- [ ] Log epoch and learning rate
+- [x] Log epoch and learning rate
 
 - [ ] LR decay
 - [ ] ETA decay (for KL loss)
@@ -249,8 +227,6 @@ class EncoderRNN(nn.Module):
 
         # Sample $z = \mu + \sigma \cdot \mathcal{N}(0, I)$
         z = mu + sigma * torch.normal(mu.new_zeros(mu.shape), mu.new_ones(mu.shape))
-
-        #
         return z, mu, sigma_hat
 
 
@@ -340,6 +316,7 @@ class ReconstructionLoss(nn.Module):
         #
         # `xy` will have shape `[seq_len, batch_size, n_distributions, 2]`
         xy = target[:, :, 0:2].unsqueeze(-2).expand(-1, -1, dist.n_distributions, -1)
+
         # Calculate the probabilities
         # $$p(\Delta x, \Delta y) =
         # \sum_{j=1}^M \Pi_j \mathcal{N} \big( \Delta x, \Delta y \vert
@@ -365,8 +342,6 @@ class ReconstructionLoss(nn.Module):
 
 class KLDivLoss(nn.Module):
     """
-    ## KL-Divergence loss
-
     This calculates the KL divergence between a given normal distribution and $\mathcal{N}(0, 1)$
     """
 
@@ -377,8 +352,6 @@ class KLDivLoss(nn.Module):
 
 class Sampler:
     """
-    ## Sampler
-
     This samples a sketch from the decoder and plots it
     """
 
@@ -597,7 +570,41 @@ class Trainer():
         self.sampler = Sampler(self.encoder, self.decoder)
         # Pick 5 indices from the validation dataset, so the sampling can be compared across epochs
         self.valid_idxs = [np.random.choice(len(self.valid_dataset)) for _ in range(5)]
-        
+
+    def save(self, epoch):
+        torch.save(self.encoder.state_dict(), \
+            Path(self.run_dir) / f'runid-{self.run_id}_epoch-{epoch:05d}_encoderRNN.pth')
+        torch.save(self.decoder.state_dict(), \
+            Path(self.run_dir) / f'runid-{self.run_id}_epoch-{epoch:05d}_decoderRNN.pth')
+
+    def load(self, epoch):
+        saved_encoder = torch.load(Path(self.run_dir) / f'runid-{self.run_id}_epoch-{epoch:05d}_encoderRNN.pth')
+        saved_decoder = torch.load(Path(self.run_dir) / f'runid-{self.run_id}_epoch-{epoch:05d}_decoderRNN.pth')
+        self.encoder.load_state_dict(saved_encoder)
+        self.decoder.load_state_dict(saved_decoder)
+
+    def sample(self, epoch, display=False):
+        orig_paths = []
+        decoded_paths = []
+        for idx in self.valid_idxs:
+            orig_path = self.run_dir / f'runid-{self.run_id}_epoch-{epoch:05d}_sample-{idx:04d}_orig.png'
+            decoded_path = self.run_dir / f'runid-{self.run_id}_epoch-{epoch:05d}_sample-{idx:04d}_decoded.png'
+
+            # Randomly pick a sample from validation dataset to encoder
+            data, *_ = self.valid_dataset[idx]
+            self.sampler.plot(data, orig_path)
+
+            # Add batch dimension and move it to device
+            data_batched = data.unsqueeze(1).to(self.device)
+            # Sample
+            self.sampler.sample(data_batched, self.hp.temperature, decoded_path)
+
+            if display:
+                Image.open(orig_path).show()
+                Image.open(decoded_path).show()
+            orig_paths.append(orig_path)
+            decoded_paths.append(decoded_path)
+        return sorted(orig_paths), sorted(decoded_paths)   
 
     def step(self, batch: Any, is_training=False):
         self.encoder.train(is_training)
@@ -688,41 +695,6 @@ class Trainer():
             if epoch % self.hp.save_every_n_epochs == 0:
                 self.save(epoch)
                 self.sample(epoch)
-
-    def sample(self, epoch, display=False):
-        orig_paths = []
-        decoded_paths = []
-        for idx in self.valid_idxs:
-            orig_path = self.run_dir / f'runid-{self.run_id}_epoch-{epoch:05d}_sample-{idx:04d}_orig.png'
-            decoded_path = self.run_dir / f'runid-{self.run_id}_epoch-{epoch:05d}_sample-{idx:04d}_decoded.png'
-
-            # Randomly pick a sample from validation dataset to encoder
-            data, *_ = self.valid_dataset[idx]
-            self.sampler.plot(data, orig_path)
-
-            # Add batch dimension and move it to device
-            data_batched = data.unsqueeze(1).to(self.device)
-            # Sample
-            self.sampler.sample(data_batched, self.hp.temperature, decoded_path)
-
-            if display:
-                Image.open(orig_path).show()
-                Image.open(decoded_path).show()
-            orig_paths.append(orig_path)
-            decoded_paths.append(decoded_path)
-        return sorted(orig_paths), sorted(decoded_paths)
-    
-    def save(self, epoch):
-        torch.save(self.encoder.state_dict(), \
-            Path(self.run_dir) / f'runid-{self.run_id}_epoch-{epoch:05d}_encoderRNN.pth')
-        torch.save(self.decoder.state_dict(), \
-            Path(self.run_dir) / f'runid-{self.run_id}_epoch-{epoch:05d}_decoderRNN.pth')
-
-    def load(self, epoch):
-        saved_encoder = torch.load(Path(self.run_dir) / f'runid-{self.run_id}_epoch-{epoch:05d}_encoderRNN.pth')
-        saved_decoder = torch.load(Path(self.run_dir) / f'runid-{self.run_id}_epoch-{epoch:05d}_decoderRNN.pth')
-        self.encoder.load_state_dict(saved_encoder)
-        self.decoder.load_state_dict(saved_decoder)
 
 
 def main():
