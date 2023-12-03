@@ -28,8 +28,8 @@ class HParams():
     # duration of training run
     epochs = 50000
     # how often to compute validation metrics / persist / sample
-    validate_every_n_epochs = 2
     save_every_n_epochs = 100
+    # validate_every_n_epochs = 2
 
     # adaptive learning rate
     lr = 1e-3
@@ -181,7 +181,8 @@ class Trainer():
         if self.use_wandb:
             wandb.log(metrics, step=self.total_steps)
         else:
-            pprint({'step': self.total_steps, **metrics})
+            pass
+            #pprint({'step': self.total_steps, **metrics})
 
     def sample(self, epoch, display=False):
         orig_paths = []
@@ -257,9 +258,9 @@ class Trainer():
             for batch in iter(self.valid_loader):
                 loss, reconstruction_loss, kl_loss, batch_items = self.step(batch, is_training=False)
 
-                total_loss += loss.item() * batch_items
-                total_reconstruction_loss += reconstruction_loss.item() * batch_items
-                total_kl_loss += kl_loss.item() * batch_items
+                total_loss += loss * batch_items
+                total_reconstruction_loss += reconstruction_loss * batch_items
+                total_kl_loss += kl_loss * batch_items
                 total_items += batch_items
                 
         avg_loss = total_loss / total_items
@@ -295,9 +296,8 @@ class Trainer():
         mb = master_bar(range(self.hp.epochs))
         for epoch in mb:
             self.train_one_epoch(epoch=epoch, parent_progressbar=mb)
-            if epoch % self.hp.validate_every_n_epochs == 0:
-                self.validate_one_epoch(epoch)
+            val_avg_loss, *_ = self.validate_one_epoch(epoch)
             if epoch % self.hp.save_every_n_epochs == 0:
                 self.save(epoch)
                 self.sample(epoch)
-            mb.write(f'Finished epoch {epoch}.')
+            mb.write(f'Finished epoch {epoch}. Validation Loss: {val_avg_loss}')
