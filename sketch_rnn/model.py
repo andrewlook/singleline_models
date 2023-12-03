@@ -6,6 +6,27 @@ import torch
 import torch.nn as nn
 
 
+class LSTMCell(nn.Module):
+    def __init__(self, ni, nh, bidirectional=False):
+        super().__init__()
+        # TODO: bidirectional is unused
+        self.ih = nn.Linear(ni,4*nh)
+        self.hh = nn.Linear(nh,4*nh)
+    
+    # TODO: ortho init?
+
+    def forward(self, input, state):
+        h,c = state
+        # One big multiplication for all the gates is better than 4 smaller ones
+        gates = (self.ih(input) + self.hh(h)).chunk(4, 1)
+        ingate,forgetgate,outgate = map(torch.sigmoid, gates[:3])
+        cellgate = gates[3].tanh()
+
+        c = (forgetgate*c) + (ingate*cellgate)
+        h = outgate * c.tanh()
+        return h, (h,c)
+
+
 class EncoderRNN(nn.Module):
     """
     ## Encoder module
@@ -17,13 +38,17 @@ class EncoderRNN(nn.Module):
         super().__init__()
         # Create a bidirectional LSTM taking a sequence of
         # $(\Delta x, \Delta y, p_1, p_2, p_3)$ as input.
+        # self.lstm = LSTMCell(5, enc_hidden_size, bidirectional=True)
         self.lstm = nn.LSTM(5, enc_hidden_size, bidirectional=True)
+
         # Head to get $\mu$
         self.mu_head = nn.Linear(2 * enc_hidden_size, d_z)
+        
         # Head to get $\hat{\sigma}$
         self.sigma_head = nn.Linear(2 * enc_hidden_size, d_z)
 
     def forward(self, inputs: torch.Tensor, state=None):
+        print(f"EncoderRNN - state.shape: {state.shape if state else None}")
         # The hidden state of the bidirectional LSTM is the concatenation of the
         # output of the last token in the forward direction and
         # first token in the reverse direction, which is what we want.
@@ -58,6 +83,7 @@ class DecoderRNN(nn.Module):
     def __init__(self, d_z: int, dec_hidden_size: int, n_distributions: int):
         super().__init__()
         # LSTM takes $[(\Delta x, \Delta y, p_1, p_2, p_3); z]$ as input
+        # self.lstm = LSTMCell(d_z + 5, dec_hidden_size)
         self.lstm = nn.LSTM(d_z + 5, dec_hidden_size)
 
         # Initial state of the LSTM is $[h_0; c_0] = \tanh(W_{z}z + b_z)$.
@@ -80,6 +106,7 @@ class DecoderRNN(nn.Module):
         self.dec_hidden_size = dec_hidden_size
 
     def forward(self, x: torch.Tensor, z: torch.Tensor, state: Optional[Tuple[torch.Tensor, torch.Tensor]]):
+        #print(f"DecoderRNN - state.shape: {state[0].shape,state[1].shape if state else None}")
         # Calculate the initial state
         if state is None:
             # $[h_0; c_0] = \tanh(W_{z}z + b_z)$
@@ -87,6 +114,7 @@ class DecoderRNN(nn.Module):
             # `h` and `c` have shapes `[batch_size, lstm_size]`. We want to shape them
             # to `[1, batch_size, lstm_size]` because that's the shape used in LSTM.
             state = (h.unsqueeze(0).contiguous(), c.unsqueeze(0).contiguous())
+        print(f"DecoderRNN - state.shape: {state[0].shape,state[1].shape if state else None}")
 
         # Run the LSTM
         outputs, state = self.lstm(x, state)

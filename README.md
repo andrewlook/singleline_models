@@ -32,7 +32,6 @@ All data is stored in stroke-3 format, meaning a list with three columns:
 - [x] Log epoch and learning rate
 - [x] LR decay
 - [x] ETA decay (for KL loss)
-
 - [ ] Dropout
 - [ ] Layer Normalization
 - [ ] Recurrent Dropout
