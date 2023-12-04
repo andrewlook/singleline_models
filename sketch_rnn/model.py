@@ -7,24 +7,35 @@ import torch.nn as nn
 
 
 class LSTMCell(nn.Module):
-    def __init__(self, ni, nh, bidirectional=False):
+    def __init__(self, ni, nh):
         super().__init__()
-        # TODO: bidirectional is unused
         self.ih = nn.Linear(ni,4*nh)
         self.hh = nn.Linear(nh,4*nh)
     
-    # TODO: ortho init?
-
     def forward(self, input, state):
         h,c = state
-        # One big multiplication for all the gates is better than 4 smaller ones
-        gates = (self.ih(input) + self.hh(h)).chunk(4, 1)
+        # print(f"h: {h.shape}")
+        # print(f"c: {c.shape}")
+        h = h.squeeze(0)
+        c = c.squeeze(0)
+        # print(f"h: {h.shape}")
+        # print(f"c: {c.shape}")
+        
+        prechunk = self.ih(input) + self.hh(h)
+        # print(f"prechunk: {prechunk.shape}")
+        gates = prechunk.chunk(4, 2)
+        # print(f"gates: {[g.shape for g in gates]}")
         ingate,forgetgate,outgate = map(torch.sigmoid, gates[:3])
         cellgate = gates[3].tanh()
 
+        # print(f"forgetgate: {forgetgate.shape}")
+        # print(f"ingate: {ingate.shape}")
+        # print(f"outgate: {outgate.shape}")
+        # print(f"cellgate: {cellgate.shape}")
         c = (forgetgate*c) + (ingate*cellgate)
         h = outgate * c.tanh()
-        return h, (h,c)
+
+        return h, (h[-1],c[-1])
 
 
 class EncoderRNN(nn.Module):
@@ -36,11 +47,12 @@ class EncoderRNN(nn.Module):
 
     def __init__(self, d_z: int, enc_hidden_size: int):
         super().__init__()
+        self.enc_hidden_size = enc_hidden_size
         # Create a bidirectional LSTM taking a sequence of
         # $(\Delta x, \Delta y, p_1, p_2, p_3)$ as input.
         
-        # self.lstm = LSTMCell(5, enc_hidden_size, bidirectional=True)
-        self.lstm = nn.LSTM(5, enc_hidden_size)
+        self.lstm = LSTMCell(5, enc_hidden_size)
+        # self.lstm = nn.LSTM(5, enc_hidden_size)
 
         # Head to get $\mu$
         self.mu_head = nn.Linear(enc_hidden_size, d_z)
@@ -49,15 +61,24 @@ class EncoderRNN(nn.Module):
         self.sigma_head = nn.Linear(enc_hidden_size, d_z)
 
     def forward(self, inputs: torch.Tensor, state=None):
-        print(f"EncoderRNN - state.shape: {state.shape if state else None}")
-        
+        """
+        inputs: [sequence_length, batch_size, input_dim=5 (for stroke-5)]
+        state: [1, batch_size, enc_hidden_size]
+        """
+        batch_size = inputs.shape[1]
+        if not state:
+            _h = torch.zeros((1, batch_size, self.enc_hidden_size))
+            _c = torch.zeros((1, batch_size, self.enc_hidden_size))
+            state = (_h, _c)
 
         _, (hidden, cell) = self.lstm(inputs.float(), state)
 
-        # The state has shape `[2, batch_size, hidden_size]`,
-        # where the first dimension is the direction.
-        # We rearrange it to get $h = [h_{\rightarrow}; h_{\leftarrow}]$
-        hidden = einops.rearrange(hidden, 'fb b h -> b (fb h)')
+        # print(f"hidden: {hidden.shape}")
+
+        # # The state has shape `[2, batch_size, hidden_size]`,
+        # # where the first dimension is the direction.
+        # # We rearrange it to get $h = [h_{\rightarrow}; h_{\leftarrow}]$
+        # hidden = einops.rearrange(hidden, 'fb b h -> b (fb h)')
 
         # $\mu$
         mu = self.mu_head(hidden)
@@ -72,17 +93,11 @@ class EncoderRNN(nn.Module):
 
 
 class DecoderRNN(nn.Module):
-    """
-    ## Decoder module
-
-    This consists of a LSTM
-    """
-
     def __init__(self, d_z: int, dec_hidden_size: int, n_distributions: int):
         super().__init__()
         # LSTM takes $[(\Delta x, \Delta y, p_1, p_2, p_3); z]$ as input
-        # self.lstm = LSTMCell(d_z + 5, dec_hidden_size)
-        self.lstm = nn.LSTM(d_z + 5, dec_hidden_size)
+        self.lstm = LSTMCell(d_z + 5, dec_hidden_size)
+        # self.lstm = nn.LSTM(d_z + 5, dec_hidden_size)
 
         # Initial state of the LSTM is $[h_0; c_0] = \tanh(W_{z}z + b_z)$.
         # `init_state` is the linear transformation for this
@@ -104,7 +119,6 @@ class DecoderRNN(nn.Module):
         self.dec_hidden_size = dec_hidden_size
 
     def forward(self, x: torch.Tensor, z: torch.Tensor, state: Optional[Tuple[torch.Tensor, torch.Tensor]]):
-        #print(f"DecoderRNN - state.shape: {state[0].shape,state[1].shape if state else None}")
         # Calculate the initial state
         if state is None:
             # $[h_0; c_0] = \tanh(W_{z}z + b_z)$
@@ -112,8 +126,7 @@ class DecoderRNN(nn.Module):
             # `h` and `c` have shapes `[batch_size, lstm_size]`. We want to shape them
             # to `[1, batch_size, lstm_size]` because that's the shape used in LSTM.
             state = (h.unsqueeze(0).contiguous(), c.unsqueeze(0).contiguous())
-        print(f"DecoderRNN - state.shape: {state[0].shape,state[1].shape if state else None}")
-
+        
         # Run the LSTM
         outputs, state = self.lstm(x, state)
 
