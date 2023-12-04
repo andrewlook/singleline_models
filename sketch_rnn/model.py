@@ -10,12 +10,20 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class LSTMCell(nn.Module):
-    def __init__(self, ni, nh, use_recurrent_dropout=False, dropout_keep_prob=0.0):
+    def __init__(self, ni, nh,
+                 use_recurrent_dropout=False,
+                 dropout_keep_prob=0.0,
+                 use_layer_norm=False,
+                 layer_norm_learnable=False):
         super().__init__()
         self.use_recurrent_dropout = use_recurrent_dropout
         self.dropout_keep_prob = dropout_keep_prob
+        self.use_layer_norm = use_layer_norm
         self.ih = nn.Linear(ni,4*nh)
         self.hh = nn.Linear(nh,4*nh)
+        if use_layer_norm:
+            self.ln_ih = nn.LayerNorm(4*nh, elementwise_affine=layer_norm_learnable)
+            self.ln_hh = nn.LayerNorm(4*nh, elementwise_affine=layer_norm_learnable)
     
     def forward(self, input, state):
         h,c = state
@@ -25,6 +33,12 @@ class LSTMCell(nn.Module):
         c = c.squeeze(0)
         # print(f"h: {h.shape}")
         # print(f"c: {c.shape}")
+
+        ih = self.ih
+        hh = self.hh
+        if self.use_layer_norm:
+            ih = self.ln_ih(ih)
+            hh = self.ln_hh(hh)
         
         prechunk = self.ih(input) + self.hh(h)
         # print(f"prechunk: {prechunk.shape}")
@@ -52,13 +66,24 @@ class EncoderRNN(nn.Module):
     This consists of a bidirectional LSTM
     """
 
-    def __init__(self, d_z: int, enc_hidden_size: int, use_recurrent_dropout=False, dropout_keep_prob=0.0):
+    def __init__(self, d_z: int, enc_hidden_size: int,
+                 use_recurrent_dropout=False,
+                 dropout_keep_prob=0.0,
+                 use_layer_norm=False,
+                 layer_norm_learnable=False
+                 ):
         super().__init__()
         self.enc_hidden_size = enc_hidden_size
         # Create a bidirectional LSTM taking a sequence of
         # $(\Delta x, \Delta y, p_1, p_2, p_3)$ as input.
         
-        self.lstm = LSTMCell(5, enc_hidden_size, dropout_keep_prob=dropout_keep_prob, use_recurrent_dropout=use_recurrent_dropout)
+        self.lstm = LSTMCell(5,
+                             enc_hidden_size,
+                             dropout_keep_prob=dropout_keep_prob,
+                             use_recurrent_dropout=use_recurrent_dropout,
+                             use_layer_norm=use_layer_norm,
+                             layer_norm_learnable=layer_norm_learnable
+                             )
         # self.lstm = nn.LSTM(5, enc_hidden_size)
 
         # Head to get $\mu$
@@ -100,10 +125,21 @@ class EncoderRNN(nn.Module):
 
 
 class DecoderRNN(nn.Module):
-    def __init__(self, d_z: int, dec_hidden_size: int, n_distributions: int, use_recurrent_dropout=False, dropout_keep_prob=0.0):
+    def __init__(self, d_z: int, dec_hidden_size: int, n_distributions: int,
+                 use_recurrent_dropout=False,
+                 dropout_keep_prob=0.0,
+                 use_layer_norm=False,
+                 layer_norm_learnable=False
+                 ):
         super().__init__()
         # LSTM takes $[(\Delta x, \Delta y, p_1, p_2, p_3); z]$ as input
-        self.lstm = LSTMCell(d_z + 5, dec_hidden_size, use_recurrent_dropout=use_recurrent_dropout, dropout_keep_prob=dropout_keep_prob)
+        self.lstm = LSTMCell(d_z + 5,
+                             dec_hidden_size,
+                             use_recurrent_dropout=use_recurrent_dropout,
+                             dropout_keep_prob=dropout_keep_prob,
+                             use_layer_norm=use_layer_norm,
+                             layer_norm_learnable=layer_norm_learnable,
+                             )
         # self.lstm = nn.LSTM(d_z + 5, dec_hidden_size)
 
         # Initial state of the LSTM is $[h_0; c_0] = \tanh(W_{z}z + b_z)$.

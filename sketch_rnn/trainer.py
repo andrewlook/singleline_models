@@ -40,6 +40,10 @@ class HParams():
     # recurrent dropout
     use_recurrent_dropout = True
     dropout_keep_prob = 0.9
+
+    # layer normalization
+    use_layer_norm = True
+    layer_norm_learnable = True
     
     # Encoder and decoder sizes
     enc_hidden_size = 256
@@ -141,6 +145,8 @@ class Trainer():
             self.hp.enc_hidden_size,
             use_recurrent_dropout=self.hp.use_recurrent_dropout,
             dropout_keep_prob=self.hp.dropout_keep_prob,
+            use_layer_norm=self.hp.use_layer_norm,
+            layer_norm_learnable=self.hp.layer_norm_learnable,
         ).to(self.device)
         self.decoder = DecoderRNN(
             self.hp.d_z,
@@ -148,8 +154,10 @@ class Trainer():
             self.hp.n_distributions,
             use_recurrent_dropout=self.hp.use_recurrent_dropout,
             dropout_keep_prob=self.hp.dropout_keep_prob,
+            use_layer_norm=self.hp.use_layer_norm,
+            layer_norm_learnable=self.hp.layer_norm_learnable,
         ).to(self.device)
-        
+
         if self.use_wandb:
             wandb.watch((self.encoder, self.decoder), log="all", log_freq=10, log_graph=True)
 
