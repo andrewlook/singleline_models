@@ -36,6 +36,10 @@ class HParams():
     use_lr_decay = False
     min_lr = 1e-5
     lr_decay = 0.9999
+
+    # recurrent dropout
+    use_recurrent_dropout = True
+    dropout_keep_prob = 0.9
     
     # Encoder and decoder sizes
     enc_hidden_size = 256
@@ -132,8 +136,20 @@ class Trainer():
         self.total_steps = 0
         
         # Initialize encoder & decoder
-        self.encoder = EncoderRNN(self.hp.d_z, self.hp.enc_hidden_size).to(self.device)
-        self.decoder = DecoderRNN(self.hp.d_z, self.hp.dec_hidden_size, self.hp.n_distributions).to(self.device)
+        self.encoder = EncoderRNN(
+            self.hp.d_z,
+            self.hp.enc_hidden_size,
+            use_recurrent_dropout=self.hp.use_recurrent_dropout,
+            dropout_keep_prob=self.hp.dropout_keep_prob,
+        ).to(self.device)
+        self.decoder = DecoderRNN(
+            self.hp.d_z,
+            self.hp.dec_hidden_size,
+            self.hp.n_distributions,
+            use_recurrent_dropout=self.hp.use_recurrent_dropout,
+            dropout_keep_prob=self.hp.dropout_keep_prob,
+        ).to(self.device)
+        
         if self.use_wandb:
             wandb.watch((self.encoder, self.decoder), log="all", log_freq=10, log_graph=True)
 

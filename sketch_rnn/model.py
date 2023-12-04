@@ -4,13 +4,16 @@ from typing import Optional, Tuple
 import einops
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class LSTMCell(nn.Module):
-    def __init__(self, ni, nh):
+    def __init__(self, ni, nh, use_recurrent_dropout=False, dropout_keep_prob=0.0):
         super().__init__()
+        self.use_recurrent_dropout = use_recurrent_dropout
+        self.dropout_keep_prob = dropout_keep_prob
         self.ih = nn.Linear(ni,4*nh)
         self.hh = nn.Linear(nh,4*nh)
     
@@ -28,7 +31,9 @@ class LSTMCell(nn.Module):
         gates = prechunk.chunk(4, 2)
         # print(f"gates: {[g.shape for g in gates]}")
         ingate,forgetgate,outgate = map(torch.sigmoid, gates[:3])
-        cellgate = gates[3].tanh()
+
+        if self.use_recurrent_dropout:
+            cellgate = F.dropout(gates[3].tanh(), p=1-self.dropout_keep_prob)
 
         # print(f"forgetgate: {forgetgate.shape}")
         # print(f"ingate: {ingate.shape}")
@@ -47,13 +52,13 @@ class EncoderRNN(nn.Module):
     This consists of a bidirectional LSTM
     """
 
-    def __init__(self, d_z: int, enc_hidden_size: int):
+    def __init__(self, d_z: int, enc_hidden_size: int, use_recurrent_dropout=False, dropout_keep_prob=0.0):
         super().__init__()
         self.enc_hidden_size = enc_hidden_size
         # Create a bidirectional LSTM taking a sequence of
         # $(\Delta x, \Delta y, p_1, p_2, p_3)$ as input.
         
-        self.lstm = LSTMCell(5, enc_hidden_size)
+        self.lstm = LSTMCell(5, enc_hidden_size, dropout_keep_prob=dropout_keep_prob, use_recurrent_dropout=use_recurrent_dropout)
         # self.lstm = nn.LSTM(5, enc_hidden_size)
 
         # Head to get $\mu$
@@ -95,10 +100,10 @@ class EncoderRNN(nn.Module):
 
 
 class DecoderRNN(nn.Module):
-    def __init__(self, d_z: int, dec_hidden_size: int, n_distributions: int):
+    def __init__(self, d_z: int, dec_hidden_size: int, n_distributions: int, use_recurrent_dropout=False, dropout_keep_prob=0.0):
         super().__init__()
         # LSTM takes $[(\Delta x, \Delta y, p_1, p_2, p_3); z]$ as input
-        self.lstm = LSTMCell(d_z + 5, dec_hidden_size)
+        self.lstm = LSTMCell(d_z + 5, dec_hidden_size, use_recurrent_dropout=use_recurrent_dropout, dropout_keep_prob=dropout_keep_prob)
         # self.lstm = nn.LSTM(d_z + 5, dec_hidden_size)
 
         # Initial state of the LSTM is $[h_0; c_0] = \tanh(W_{z}z + b_z)$.
