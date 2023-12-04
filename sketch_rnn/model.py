@@ -34,11 +34,10 @@ class LSTMCell(nn.Module):
         # print(f"h: {h.shape}")
         # print(f"c: {c.shape}")
 
-        ih = self.ih
-        hh = self.hh
         if self.use_layer_norm:
-            ih = self.ln_ih(ih)
-            hh = self.ln_hh(hh)
+            prechunk = self.ln_ih(self.ih(input)) + self.ln_hh(self.hh(h))
+        else:
+            prechunk = self.ih(input) + self.hh(h)
         
         prechunk = self.ih(input) + self.hh(h)
         # print(f"prechunk: {prechunk.shape}")
