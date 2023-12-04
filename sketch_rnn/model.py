@@ -34,19 +34,20 @@ class LSTMCell(nn.Module):
         # print(f"h: {h.shape}")
         # print(f"c: {c.shape}")
 
+        i2h = self.ih(input)
+        h2h = self.hh(h)
         if self.use_layer_norm:
-            prechunk = self.ln_ih(self.ih(input)) + self.ln_hh(self.hh(h))
-        else:
-            prechunk = self.ih(input) + self.hh(h)
-        
-        prechunk = self.ih(input) + self.hh(h)
+            i2h = self.ln_ih(i2h)
+            h2h = self.ln_hh(h2h)
+        preact = i2h + h2h
+
         # print(f"prechunk: {prechunk.shape}")
-        gates = prechunk.chunk(4, 2)
+        gates = preact.chunk(4, 2)
         # print(f"gates: {[g.shape for g in gates]}")
         ingate,forgetgate,outgate = map(torch.sigmoid, gates[:3])
 
         if self.use_recurrent_dropout:
-            cellgate = F.dropout(gates[3].tanh(), p=1-self.dropout_keep_prob)
+            cellgate = F.dropout(gates[3].tanh(), p=1-self.dropout_keep_prob, training=self.training)
 
         # print(f"forgetgate: {forgetgate.shape}")
         # print(f"ingate: {ingate.shape}")

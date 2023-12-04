@@ -43,7 +43,7 @@ class HParams():
 
     # layer normalization
     use_layer_norm = True
-    layer_norm_learnable = True
+    layer_norm_learnable = False
     
     # Encoder and decoder sizes
     enc_hidden_size = 256
