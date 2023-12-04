@@ -217,6 +217,10 @@ class Trainer():
         data = batch[0].to(self.device).transpose(0, 1)
         mask = batch[1].to(self.device).transpose(0, 1)
         batch_items = len(data)
+
+        # _h = torch.zeros((1, batch_items, self.hp.enc_hidden_size)).to(self.device)
+        # _c = torch.zeros((1, batch_items, self.hp.enc_hidden_size)).to(self.device)
+        ## , state=(_h, _c)
         
         # Get $z$, $\mu$, and $\hat{\sigma}$
         z, mu, sigma_hat = self.encoder(data)

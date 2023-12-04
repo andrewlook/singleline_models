@@ -5,6 +5,8 @@ import einops
 import torch
 import torch.nn as nn
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 class LSTMCell(nn.Module):
     def __init__(self, ni, nh):
@@ -67,8 +69,8 @@ class EncoderRNN(nn.Module):
         """
         batch_size = inputs.shape[1]
         if not state:
-            _h = torch.zeros((1, batch_size, self.enc_hidden_size))
-            _c = torch.zeros((1, batch_size, self.enc_hidden_size))
+            _h = torch.zeros((1, batch_size, self.enc_hidden_size)).to(device)
+            _c = torch.zeros((1, batch_size, self.enc_hidden_size)).to(device)
             state = (_h, _c)
 
         _, (hidden, cell) = self.lstm(inputs.float(), state)
