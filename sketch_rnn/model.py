@@ -38,24 +38,22 @@ class EncoderRNN(nn.Module):
         super().__init__()
         # Create a bidirectional LSTM taking a sequence of
         # $(\Delta x, \Delta y, p_1, p_2, p_3)$ as input.
+        
         # self.lstm = LSTMCell(5, enc_hidden_size, bidirectional=True)
-        self.lstm = nn.LSTM(5, enc_hidden_size, bidirectional=True)
+        self.lstm = nn.LSTM(5, enc_hidden_size)
 
         # Head to get $\mu$
-        self.mu_head = nn.Linear(2 * enc_hidden_size, d_z)
+        self.mu_head = nn.Linear(enc_hidden_size, d_z)
         
         # Head to get $\hat{\sigma}$
-        self.sigma_head = nn.Linear(2 * enc_hidden_size, d_z)
+        self.sigma_head = nn.Linear(enc_hidden_size, d_z)
 
     def forward(self, inputs: torch.Tensor, state=None):
         print(f"EncoderRNN - state.shape: {state.shape if state else None}")
-        # The hidden state of the bidirectional LSTM is the concatenation of the
-        # output of the last token in the forward direction and
-        # first token in the reverse direction, which is what we want.
-        # $$h_{\rightarrow} = encode_{\rightarrow}(S),
-        # h_{\leftarrow} = encode←_{\leftarrow}(S_{reverse}),
-        # h = [h_{\rightarrow}; h_{\leftarrow}]$$
+        
+
         _, (hidden, cell) = self.lstm(inputs.float(), state)
+
         # The state has shape `[2, batch_size, hidden_size]`,
         # where the first dimension is the direction.
         # We rearrange it to get $h = [h_{\rightarrow}; h_{\leftarrow}]$
