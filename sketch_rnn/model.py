@@ -6,6 +6,23 @@ import torch
 import torch.nn as nn
 
 
+def lstm_layer(ni,
+               nh,
+               bidirectional=False,
+               use_recurrent_dropout=False,
+               dropout_keep_prob=0.0,
+               use_layer_norm=False,
+               layer_norm_learnable=False,
+               lstm_impl="builtin"):
+    if lstm_impl == 'builtin':
+        assert not use_recurrent_dropout
+        assert not use_layer_norm
+        assert not layer_norm_learnable
+        return nn.LSTM(ni, nh, bidirectional=bidirectional)
+    else:
+        raise NotImplementedError()
+
+
 class EncoderRNN(nn.Module):
     """
     ## Encoder module
@@ -13,11 +30,23 @@ class EncoderRNN(nn.Module):
     This consists of a bidirectional LSTM
     """
 
-    def __init__(self, d_z: int, enc_hidden_size: int):
+    def __init__(self,
+                 d_z: int,
+                 enc_hidden_size: int,
+                 use_recurrent_dropout=False,
+                 dropout_keep_prob=0.0,
+                 use_layer_norm=False,
+                 layer_norm_learnable=False,
+                 lstm_impl="builtin"):
         super().__init__()
         # Create a bidirectional LSTM taking a sequence of
         # $(\Delta x, \Delta y, p_1, p_2, p_3)$ as input.
-        self.lstm = nn.LSTM(5, enc_hidden_size, bidirectional=True)
+        self.lstm = lstm_layer(5, enc_hidden_size, bidirectional=True,
+                               use_recurrent_dropout=use_recurrent_dropout,
+                               dropout_keep_prob=dropout_keep_prob,
+                               use_layer_norm=use_layer_norm,
+                               layer_norm_learnable=layer_norm_learnable,
+                               lstm_impl=lstm_impl)
         # Head to get $\mu$
         self.mu_head = nn.Linear(2 * enc_hidden_size, d_z)
         # Head to get $\hat{\sigma}$
@@ -55,10 +84,23 @@ class DecoderRNN(nn.Module):
     This consists of a LSTM
     """
 
-    def __init__(self, d_z: int, dec_hidden_size: int, n_distributions: int):
+    def __init__(self,
+                 d_z: int,
+                 dec_hidden_size: int,
+                 n_distributions: int,
+                 use_recurrent_dropout=False,
+                 dropout_keep_prob=0.0,
+                 use_layer_norm=False,
+                 layer_norm_learnable=False,
+                 lstm_impl="builtin"):
         super().__init__()
         # LSTM takes $[(\Delta x, \Delta y, p_1, p_2, p_3); z]$ as input
-        self.lstm = nn.LSTM(d_z + 5, dec_hidden_size)
+        self.lstm = lstm_layer(d_z + 5, dec_hidden_size,
+                               use_recurrent_dropout=use_recurrent_dropout,
+                               dropout_keep_prob=dropout_keep_prob,
+                               use_layer_norm=use_layer_norm,
+                               layer_norm_learnable=layer_norm_learnable,
+                               lstm_impl=lstm_impl)
 
         # Initial state of the LSTM is $[h_0; c_0] = \tanh(W_{z}z + b_z)$.
         # `init_state` is the linear transformation for this
