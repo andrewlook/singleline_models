@@ -5,6 +5,8 @@ import einops
 import torch
 import torch.nn as nn
 
+from .lstm import BidirLSTMLayer, LayerNormLSTMCell, LSTMCell, LSTMLayer
+
 
 def lstm_layer(ni,
                nh,
@@ -19,6 +21,14 @@ def lstm_layer(ni,
         assert not use_layer_norm
         assert not layer_norm_learnable
         return nn.LSTM(ni, nh, bidirectional=bidirectional)
+    elif lstm_impl == 'custom':
+        assert not use_recurrent_dropout
+        layer_cls = BidirLSTMLayer if bidirectional else LSTMLayer
+        cell_cls = LayerNormLSTMCell if use_layer_norm else LSTMCell
+        print(layer_cls, cell_cls, ni, nh)
+        # extra_cell_args = []
+        # decompose_layernorm = False # whether to use custom layernorm implementation
+        return layer_cls(cell_cls, ni, nh)
     else:
         raise NotImplementedError()
 
