@@ -46,8 +46,9 @@ class LSTMCell(nn.Module):
         # print(f"gates: {[g.shape for g in gates]}")
         ingate,forgetgate,outgate = map(torch.sigmoid, gates[:3])
 
+        cellgate = gates[3].tanh()
         if self.use_recurrent_dropout:
-            cellgate = F.dropout(gates[3].tanh(), p=1-self.dropout_keep_prob, training=self.training)
+            cellgate = F.dropout(cellgate, p=self.dropout_keep_prob, training=self.training)
 
         # print(f"forgetgate: {forgetgate.shape}")
         # print(f"ingate: {ingate.shape}")
