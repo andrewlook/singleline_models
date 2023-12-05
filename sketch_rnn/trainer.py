@@ -45,7 +45,8 @@ class HParams():
     use_layer_norm = False
     layer_norm_learnable = False
 
-    lstm_impl = "custom"
+    lstm_impl = "builtin"
+    # lstm_impl = "custom"
     
     # Encoder and decoder sizes
     enc_hidden_size = 256
@@ -245,6 +246,9 @@ class Trainer():
         data = batch[0].to(self.device).transpose(0, 1)
         mask = batch[1].to(self.device).transpose(0, 1)
         batch_items = len(data)
+
+        print(f"Trainer.step - data: {data.shape}")
+        print(data[:5,0])
         
         # Get $z$, $\mu$, and $\hat{\sigma}$
         z, mu, sigma_hat = self.encoder(data)
