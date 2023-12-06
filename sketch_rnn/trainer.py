@@ -14,7 +14,7 @@ from PIL import Image
 from torch import optim
 from torch.utils.data import DataLoader
 
-from .dataset import StrokesDataset, random_scale, augment_strokes
+from .dataset import StrokesDataset, augment_strokes, random_scale
 from .model import DecoderRNN, EncoderRNN, KLDivLoss, ReconstructionLoss
 from .sampler import Sampler
 
@@ -82,14 +82,6 @@ class HParams():
 
     def __dict__(self):
         return {k: getattr(self, k) for k in self.__dir__() if not k.startswith('__')}
-
-
-def lr_decay(optimizer, min_lr, lr_decay):
-    """Decay learning rate by a factor of lr_decay"""
-    for param_group in optimizer.param_groups:
-        if param_group['lr'] > min_lr:
-            param_group['lr'] *= lr_decay
-    return optimizer
 
 
 class Trainer():
@@ -347,16 +339,25 @@ class Trainer():
                 loss=loss,
                 reconstruction_loss=reconstruction_loss,
                 kl_loss=kl_loss,
+                epoch=epoch,
                 learning_rate=self.learning_rate,
-                epoch=epoch))
+                eta_step=self.eta_step))
         # update learning rate, if use_lr_decay is enabled
         if self.hp.use_lr_decay:
-            self.encoder_optimizer = lr_decay(self.encoder_optimizer, self.hp.min_lr, self.hp.lr_decay)
-            self.decoder_optimizer = lr_decay(self.decoder_optimizer, self.hp.min_lr, self.hp.lr_decay)
+            if self.learning_rate > self.hp.min_lr:
+                self.learning_rate *= self.hp.lr_decay
+            self.encoder_optimizer = self.update_lr(self.encoder_optimizer, self.learning_rate)
+            self.decoder_optimizer = self.update_lr(self.decoder_optimizer, self.learning_rate)
         # update weight of KL loss, if use_eta is enabled
         if self.hp.use_eta:
             self.eta_step = 1-(1-self.hp.eta_min)*self.hp.eta_R
 
+    def update_lr(self, optimizer, lr):
+        """Decay learning rate by a factor of lr_decay"""
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = lr
+        return optimizer
+        
     def train(self):
         mb = master_bar(range(self.hp.epochs))
         for epoch in mb:
