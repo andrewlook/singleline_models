@@ -13,7 +13,7 @@ def lstm_layer(ni,
                nh,
                bidirectional=False,
                use_recurrent_dropout=False,
-               dropout_keep_prob=0.0,
+               r_dropout_prob=0.0,
                use_layer_norm=False,
                layer_norm_learnable=False,
                lstm_impl="builtin"):
@@ -23,10 +23,11 @@ def lstm_layer(ni,
         assert not layer_norm_learnable
         return nn.LSTM(ni, nh, bidirectional=bidirectional)
     elif lstm_impl == 'custom':
+        r_dropout = r_dropout_prob if use_recurrent_dropout else 0
         if use_layer_norm:
-            return LayerNormLSTM(ni, nh, num_layers=1, bidirectional=bidirectional, layer_norm_enabled=True)
-            
-        assert not use_recurrent_dropout
+            return LayerNormLSTM(ni, nh, num_layers=1, bidirectional=bidirectional, layer_norm_enabled=True, r_dropout=r_dropout)
+
+        # assert not use_recurrent_dropout
 
         rnn_cells = [[LSTMCell(ni, nh), LSTMCell(ni, nh)]] if bidirectional else [LSTMCell(ni, nh)]        
         # print(layer_cls, cell_cls, ni, nh)
@@ -48,7 +49,7 @@ class EncoderRNN(nn.Module):
                  d_z: int,
                  enc_hidden_size: int,
                  use_recurrent_dropout=False,
-                 dropout_keep_prob=0.0,
+                 r_dropout_prob=0.0,
                  use_layer_norm=False,
                  layer_norm_learnable=False,
                  lstm_impl="builtin"):
@@ -60,7 +61,7 @@ class EncoderRNN(nn.Module):
         # $(\Delta x, \Delta y, p_1, p_2, p_3)$ as input.
         self.lstm = lstm_layer(5, enc_hidden_size, bidirectional=True,
                                use_recurrent_dropout=use_recurrent_dropout,
-                               dropout_keep_prob=dropout_keep_prob,
+                               r_dropout_prob=r_dropout_prob,
                                use_layer_norm=use_layer_norm,
                                layer_norm_learnable=layer_norm_learnable,
                             #    lstm_impl="builtin")
@@ -133,7 +134,7 @@ class DecoderRNN(nn.Module):
                  dec_hidden_size: int,
                  n_distributions: int,
                  use_recurrent_dropout=False,
-                 dropout_keep_prob=0.0,
+                 r_dropout_prob=0.0,
                  use_layer_norm=False,
                  layer_norm_learnable=False,
                  lstm_impl="builtin"):
@@ -141,7 +142,7 @@ class DecoderRNN(nn.Module):
         # LSTM takes $[(\Delta x, \Delta y, p_1, p_2, p_3); z]$ as input
         self.lstm = lstm_layer(d_z + 5, dec_hidden_size,
                                use_recurrent_dropout=use_recurrent_dropout,
-                               dropout_keep_prob=dropout_keep_prob,
+                               r_dropout_prob=r_dropout_prob,
                                use_layer_norm=use_layer_norm,
                                layer_norm_learnable=layer_norm_learnable,
                             #    lstm_impl="builtin")

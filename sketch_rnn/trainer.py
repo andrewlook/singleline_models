@@ -39,7 +39,7 @@ class HParams():
 
     # recurrent dropout
     use_recurrent_dropout = False
-    dropout_keep_prob = 0.0
+    r_dropout_prob = 0.1
 
     # layer normalization
     use_layer_norm = True
@@ -147,7 +147,7 @@ class Trainer():
             self.hp.d_z,
             self.hp.enc_hidden_size,
             use_recurrent_dropout=self.hp.use_recurrent_dropout,
-            dropout_keep_prob=self.hp.dropout_keep_prob,
+            r_dropout_prob=self.hp.r_dropout_prob,
             use_layer_norm=self.hp.use_layer_norm,
             layer_norm_learnable=self.hp.layer_norm_learnable,
             lstm_impl=self.hp.lstm_impl,
@@ -157,7 +157,7 @@ class Trainer():
             self.hp.dec_hidden_size,
             self.hp.n_distributions,
             use_recurrent_dropout=self.hp.use_recurrent_dropout,
-            dropout_keep_prob=self.hp.dropout_keep_prob,
+            r_dropout_prob=self.hp.r_dropout_prob,
             use_layer_norm=self.hp.use_layer_norm,
             layer_norm_learnable=self.hp.layer_norm_learnable,
             lstm_impl=self.hp.lstm_impl,
