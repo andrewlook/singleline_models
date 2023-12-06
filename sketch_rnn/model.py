@@ -5,7 +5,8 @@ import einops
 import torch
 import torch.nn as nn
 
-from .lstm import BidirLSTMLayer, LSTMCell, LSTMLayer  # , LayerNormLSTMCell
+# from .lstm import BidirLSTMLayer, LSTMCell, LSTMLayer  # , LayerNormLSTMCell
+from .rnnlib import LayerNormLSTM, LSTMCell, LSTMFrame, RNNFrame
 
 
 def lstm_layer(ni,
@@ -23,12 +24,12 @@ def lstm_layer(ni,
         return nn.LSTM(ni, nh, bidirectional=bidirectional)
     elif lstm_impl == 'custom':
         assert not use_recurrent_dropout
-        layer_cls = BidirLSTMLayer if bidirectional else LSTMLayer
-        cell_cls = LSTMCell #LayerNormLSTMCell if use_layer_norm else LSTMCell
+
+        rnn_cells = [[LSTMCell(ni, nh), LSTMCell(ni, nh)]] if bidirectional else [LSTMCell(ni, nh)]        
         # print(layer_cls, cell_cls, ni, nh)
         # extra_cell_args = []
         # decompose_layernorm = False # whether to use custom layernorm implementation
-        return layer_cls(cell_cls, ni, nh)
+        return LSTMFrame(rnn_cells, bidirectional=bidirectional, batch_first=False)
     else:
         raise NotImplementedError()
 
@@ -50,8 +51,8 @@ class EncoderRNN(nn.Module):
                  lstm_impl="builtin"):
         super().__init__()
         self.enc_hidden_size = enc_hidden_size
-        # self.lstm_impl = lstm_impl
-        self.lstm_impl = "builtin"
+        self.lstm_impl = lstm_impl
+        # self.lstm_impl = "builtin"
         # Create a bidirectional LSTM taking a sequence of
         # $(\Delta x, \Delta y, p_1, p_2, p_3)$ as input.
         self.lstm = lstm_layer(5, enc_hidden_size, bidirectional=True,
@@ -59,8 +60,8 @@ class EncoderRNN(nn.Module):
                                dropout_keep_prob=dropout_keep_prob,
                                use_layer_norm=use_layer_norm,
                                layer_norm_learnable=layer_norm_learnable,
-                               lstm_impl="builtin")
-                            #    lstm_impl=lstm_impl)
+                            #    lstm_impl="builtin")
+                               lstm_impl=lstm_impl)
         print(f"EncoderRNN.__init__: {self.lstm}")
         # Head to get $\mu$
         self.mu_head = nn.Linear(2 * enc_hidden_size, d_z)
@@ -74,20 +75,22 @@ class EncoderRNN(nn.Module):
         """
         print(f"EncoderRNN.forward: inputs={inputs.shape}")
         print(inputs[:5,0,:5])
-        if state is None:
-            num_directions = 2
-            max_batch_size = inputs.shape[1]
-            h_zeros = torch.zeros(num_directions,
-                                  max_batch_size, self.enc_hidden_size,
-                                  dtype=inputs.dtype, device=inputs.device)
-            c_zeros = torch.zeros(num_directions,
-                                  max_batch_size, self.enc_hidden_size,
-                                  dtype=inputs.dtype, device=inputs.device)
-            state = (h_zeros, c_zeros)
-        print(f"EncoderRNN.forward: state[0]={state[0].shape}")
-        print(state[0][:5,:5])
-        print(f"EncoderRNN.forward: state[1]={state[1].shape}")
-        print(state[1][:5,:5])
+        # if state is None:
+        #     num_directions = 2
+        #     max_batch_size = inputs.shape[1]
+        #     h_zeros = torch.zeros(num_directions,
+        #                           max_batch_size, self.enc_hidden_size,
+        #                           dtype=inputs.dtype, device=inputs.device)
+        #     c_zeros = torch.zeros(num_directions,
+        #                           max_batch_size, self.enc_hidden_size,
+        #                           dtype=inputs.dtype, device=inputs.device)
+        #     state = (h_zeros, c_zeros)
+        
+        # print(f"EncoderRNN.forward: state[0]={state[0].shape}")
+        # print(state[0][:5,:5])
+        # print(f"EncoderRNN.forward: state[1]={state[1].shape}")
+        # print(state[1][:5,:5])
+        
         # The hidden state of the bidirectional LSTM is the concatenation of the
         # output of the last token in the forward direction and
         # first token in the reverse direction, which is what we want.
@@ -163,6 +166,8 @@ class DecoderRNN(nn.Module):
         self.dec_hidden_size = dec_hidden_size
 
     def forward(self, x: torch.Tensor, z: torch.Tensor, state: Optional[Tuple[torch.Tensor, torch.Tensor]]):
+        print(f"DecoderRNN.forward - x={x.shape}")
+
         # Calculate the initial state
         if state is None:
             # $[h_0; c_0] = \tanh(W_{z}z + b_z)$
@@ -178,6 +183,8 @@ class DecoderRNN(nn.Module):
             else:
                 raise NotImplementedError()
             # print(f"DecoderRNN: {state[0].shape}, {state[1].shape}")
+        print(f"DecoderRNN.forward - state[0]={state[0].shape}")
+        print(f"DecoderRNN.forward - state[1]={state[1].shape}")
 
         # Run the LSTM
         outputs, state = self.lstm(x, state)

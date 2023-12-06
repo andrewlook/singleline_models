@@ -1,9 +1,10 @@
 
-import torch.nn as nn
 import torch
-from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
+import torch.nn as nn
+from torch.nn.utils.rnn import (pack_padded_sequence, pad_packed_sequence,
+                                pad_sequence)
 
-from .common import no_dropout, no_layer_norm, get_indicator, get_module_device
+from .common import get_indicator, get_module_device, no_dropout, no_layer_norm
 
 
 class RNNFrame(nn.Module):
@@ -38,17 +39,16 @@ class RNNFrame(nn.Module):
     def get_zero_init_state(self, hidden_size):
         # init_state with heterogenous hidden_size
         if self.for_lstm:
+            print(f"get_zero_init_state - hidden_size={hidden_size}")
             init_hidden = init_cell = [
-                torch.zeros(hidden_size,
-                            self.rnn_cells[layer_idx][direction].hidden_size,
+                torch.zeros((hidden_size, self.rnn_cells[layer_idx][direction].hidden_size),
                             device=get_module_device(self))
                 for layer_idx in range(self.num_layers)
                 for direction in range(self.num_directions)]
-            init_state = init_hidden, init_cell
+            init_state = torch.stack(init_hidden), torch.stack(init_cell)
         else:
             init_state = [
-                torch.zeros(hidden_size,
-                            self.rnn_cells[layer_idx][direction].hidden_size,
+                torch.zeros((hidden_size, vself.rnn_cells[layer_idx][direction].hidden_size),
                             device=get_module_device(self))
                 for layer_idx in range(self.num_layers)
                 for direction in range(self.num_directions)]
@@ -57,7 +57,15 @@ class RNNFrame(nn.Module):
     def get_init_step_state(self, init_state, state_idx):
         if self.for_lstm:
             init_hidden, init_cell = init_state
-            step_state = (init_hidden[state_idx], init_cell[state_idx])
+            print(f"RNNFrame.get_init_step_state - num_directions={self.num_directions})")
+            print(f"RNNFrame.get_init_step_state - state_idx={state_idx})")
+            print(f"RNNFrame.get_init_step_state = init_hidden.shape={init_hidden.shape}")
+            print(f"RNNFrame.get_init_step_state = init_cell.shape={init_cell.shape}")
+            if self.num_directions == 2:
+                return (torch.chunk(init_hidden, 2, dim=0)[state_idx].squeeze(0), torch.chunk(init_cell, 2, dim=0)[state_idx].squeeze(0))
+            else:
+                return (init_hidden, init_cell)
+            #step_state = (init_hidden[state_idx], init_cell[state_idx])
         else:
             step_state = init_state[state_idx]
         return step_state
@@ -105,15 +113,16 @@ class RNNFrame(nn.Module):
                         for example_seq, length in zip(example_seqs, lengths)]
         return torch.cat(shifted_seqs, dim=1)
 
-    def forward(self, input, init_state=None):
+    def forward(self, input, state=None):
         """
         :param input: a tensor(s) of shape (seq_len, batch, input_size)
-        :param init_state: (h_0, c_0) where the size of both is (num_layers * num_directions, batch, hidden_size)
+        :param state: (h_0, c_0) where the size of both is (num_layers * num_directions, batch, hidden_size)
         :returns: (output, (h_n, c_n))
         - output: (seq_len, batch, num_directions * hidden_size)
         - h_n: (num_layers * num_directions, batch, hidden_size)
         - c_n: (num_layers * num_directions, batch, hidden_size)
         """
+        # print(f"RNNFrame.forward - state.shape[0]={state[0].shape}")
 
         if isinstance(input, torch.nn.utils.rnn.PackedSequence):
             input_packed = True
@@ -136,8 +145,16 @@ class RNNFrame(nn.Module):
         if not uniform_length:
             indicator = get_indicator(torch.tensor(lengths, device=get_module_device(self)))
 
-        if init_state is None:
-            init_state = self.get_zero_init_state(input.size()[1])
+        if state is None:
+            print(f"input.size()[1] = {input.size()[1]}")
+            state = self.get_zero_init_state(input.size()[1])
+        hx, cx = state
+        # hx = torch.stack(state[0])
+        # cx = torch.stack(state[1])
+        # print(f"hx.shape = {len(hx)}")
+        print(hx)
+        print(f"RNNFramge.forward - state[0].shape={hx.shape}")
+        print(f"RNNFramge.forward - state[1].shape={cx.shape}")
 
         direction_last_state_list = []
         layer_output = input
@@ -152,7 +169,12 @@ class RNNFrame(nn.Module):
             for direction in range(self.num_directions):
                 cell = self.rnn_cells[layer_idx][direction]
                 state_idx = layer_idx * self.num_directions + direction
-                step_state = self.get_init_step_state(init_state, state_idx)
+                step_state = self.get_init_step_state(state, state_idx)
+                # print(step_state)
+                # print(step_state[0])
+                # print(step_state[0][0])
+                print(f"RNNFramge.forward - step_state[0].shape={step_state[0].shape}")
+                print(f"RNNFramge.forward - step_state[1].shape={step_state[1].shape}")
 
                 direction_output = torch.zeros(
                     layer_input.size()[:2] + (cell.hidden_size,),
@@ -244,6 +266,7 @@ class LSTMCell(nn.Module):
         """
         hidden_tensor, cell_tensor = state
 
+        print(f"LSTMCell.forward: input={input.shape}, hidden_tensor={hidden_tensor.shape}")
         fio_linear, u_linear = torch.split(
             self.fiou_linear(torch.cat([input, hidden_tensor], dim=1)),
             self.hidden_size * 3, dim=1)
