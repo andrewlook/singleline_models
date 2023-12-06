@@ -247,8 +247,8 @@ class Trainer():
         mask = batch[1].to(self.device).transpose(0, 1)
         batch_items = len(data)
 
-        print(f"Trainer.step - data: {data.shape}")
-        print(data[:5,0])
+        # print(f"Trainer.step - data: {data.shape}")
+        # print(data[:5,0])
         
         # Get $z$, $\mu$, and $\hat{\sigma}$
         z, mu, sigma_hat = self.encoder(data)

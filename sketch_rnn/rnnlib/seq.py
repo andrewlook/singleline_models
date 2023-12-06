@@ -39,7 +39,7 @@ class RNNFrame(nn.Module):
     def get_zero_init_state(self, hidden_size):
         # init_state with heterogenous hidden_size
         if self.for_lstm:
-            print(f"get_zero_init_state - hidden_size={hidden_size}")
+            #print(f"get_zero_init_state - hidden_size={hidden_size}")
             init_hidden = init_cell = [
                 torch.zeros((hidden_size, self.rnn_cells[layer_idx][direction].hidden_size),
                             device=get_module_device(self))
@@ -57,10 +57,10 @@ class RNNFrame(nn.Module):
     def get_init_step_state(self, init_state, state_idx):
         if self.for_lstm:
             init_hidden, init_cell = init_state
-            print(f"RNNFrame.get_init_step_state - num_directions={self.num_directions})")
-            print(f"RNNFrame.get_init_step_state - state_idx={state_idx})")
-            print(f"RNNFrame.get_init_step_state = init_hidden.shape={init_hidden.shape}")
-            print(f"RNNFrame.get_init_step_state = init_cell.shape={init_cell.shape}")
+            #print(f"RNNFrame.get_init_step_state - num_directions={self.num_directions})")
+            #print(f"RNNFrame.get_init_step_state - state_idx={state_idx})")
+            #print(f"RNNFrame.get_init_step_state = init_hidden.shape={init_hidden.shape}")
+            #print(f"RNNFrame.get_init_step_state = init_cell.shape={init_cell.shape}")
             if self.num_directions == 2:
                 return (torch.chunk(init_hidden, 2, dim=0)[state_idx].squeeze(0), torch.chunk(init_cell, 2, dim=0)[state_idx].squeeze(0))
             else:
@@ -122,7 +122,7 @@ class RNNFrame(nn.Module):
         - h_n: (num_layers * num_directions, batch, hidden_size)
         - c_n: (num_layers * num_directions, batch, hidden_size)
         """
-        # print(f"RNNFrame.forward - state.shape[0]={state[0].shape}")
+        # #print(f"RNNFrame.forward - state.shape[0]={state[0].shape}")
 
         if isinstance(input, torch.nn.utils.rnn.PackedSequence):
             input_packed = True
@@ -146,15 +146,15 @@ class RNNFrame(nn.Module):
             indicator = get_indicator(torch.tensor(lengths, device=get_module_device(self)))
 
         if state is None:
-            print(f"input.size()[1] = {input.size()[1]}")
+            #print(f"input.size()[1] = {input.size()[1]}")
             state = self.get_zero_init_state(input.size()[1])
         hx, cx = state
         # hx = torch.stack(state[0])
         # cx = torch.stack(state[1])
-        # print(f"hx.shape = {len(hx)}")
-        print(hx)
-        print(f"RNNFramge.forward - state[0].shape={hx.shape}")
-        print(f"RNNFramge.forward - state[1].shape={cx.shape}")
+        # #print(f"hx.shape = {len(hx)}")
+        #print(hx)
+        #print(f"RNNFramge.forward - state[0].shape={hx.shape}")
+        #print(f"RNNFramge.forward - state[1].shape={cx.shape}")
 
         direction_last_state_list = []
         layer_output = input
@@ -170,11 +170,11 @@ class RNNFrame(nn.Module):
                 cell = self.rnn_cells[layer_idx][direction]
                 state_idx = layer_idx * self.num_directions + direction
                 step_state = self.get_init_step_state(state, state_idx)
-                # print(step_state)
-                # print(step_state[0])
-                # print(step_state[0][0])
-                print(f"RNNFramge.forward - step_state[0].shape={step_state[0].shape}")
-                print(f"RNNFramge.forward - step_state[1].shape={step_state[1].shape}")
+                # #print(step_state)
+                # #print(step_state[0])
+                # #print(step_state[0][0])
+                #print(f"RNNFramge.forward - step_state[0].shape={step_state[0].shape}")
+                #print(f"RNNFramge.forward - step_state[1].shape={step_state[1].shape}")
 
                 direction_output = torch.zeros(
                     layer_input.size()[:2] + (cell.hidden_size,),
@@ -266,7 +266,15 @@ class LSTMCell(nn.Module):
         """
         hidden_tensor, cell_tensor = state
 
-        print(f"LSTMCell.forward: input={input.shape}, hidden_tensor={hidden_tensor.shape}")
+        # print(f"LSTMCell.forward: input={input.shape}, hidden_tensor={hidden_tensor.shape}")
+
+        assert len(input.shape) == 2
+        if len(hidden_tensor.shape) == 3:
+            hidden_tensor = hidden_tensor.squeeze(0)
+        if len(cell_tensor.shape) == 3:
+            cell_tensor = cell_tensor.squeeze(0)
+
+        # print(f"LSTMCell.forward: input={input.shape}, hidden_tensor={hidden_tensor.shape}")
         fio_linear, u_linear = torch.split(
             self.fiou_linear(torch.cat([input, hidden_tensor], dim=1)),
             self.hidden_size * 3, dim=1)

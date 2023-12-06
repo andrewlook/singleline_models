@@ -62,19 +62,19 @@ class EncoderRNN(nn.Module):
                                layer_norm_learnable=layer_norm_learnable,
                             #    lstm_impl="builtin")
                                lstm_impl=lstm_impl)
-        print(f"EncoderRNN.__init__: {self.lstm}")
+        #print(f"EncoderRNN.__init__: {self.lstm}")
         # Head to get $\mu$
         self.mu_head = nn.Linear(2 * enc_hidden_size, d_z)
         # Head to get $\hat{\sigma}$
         self.sigma_head = nn.Linear(2 * enc_hidden_size, d_z)
 
     def forward(self, inputs: torch.Tensor, state=None):
-        print(f"EncoderRNN.forward: {self.lstm}")
+        #print(f"EncoderRNN.forward: {self.lstm}")
         """
         inputs will have shape `[seq_len, batch_size, 5]`
         """
-        print(f"EncoderRNN.forward: inputs={inputs.shape}")
-        print(inputs[:5,0,:5])
+        #print(f"EncoderRNN.forward: inputs={inputs.shape}")
+        #print(inputs[:5,0,:5])
         # if state is None:
         #     num_directions = 2
         #     max_batch_size = inputs.shape[1]
@@ -86,10 +86,10 @@ class EncoderRNN(nn.Module):
         #                           dtype=inputs.dtype, device=inputs.device)
         #     state = (h_zeros, c_zeros)
         
-        # print(f"EncoderRNN.forward: state[0]={state[0].shape}")
-        # print(state[0][:5,:5])
-        # print(f"EncoderRNN.forward: state[1]={state[1].shape}")
-        # print(state[1][:5,:5])
+        # #print(f"EncoderRNN.forward: state[0]={state[0].shape}")
+        # #print(state[0][:5,:5])
+        # #print(f"EncoderRNN.forward: state[1]={state[1].shape}")
+        # #print(state[1][:5,:5])
         
         # The hidden state of the bidirectional LSTM is the concatenation of the
         # output of the last token in the forward direction and
@@ -103,8 +103,8 @@ class EncoderRNN(nn.Module):
         # We rearrange it to get $h = [h_{\rightarrow}; h_{\leftarrow}]$
         hidden = einops.rearrange(hidden, 'fb b h -> b (fb h)')
 
-        print(f'EncoderRNN - hidden: {hidden.shape}')
-        print(hidden[:5,:4])
+        #print(f'EncoderRNN - hidden: {hidden.shape}')
+        #print(hidden[:5,:4])
 
         # $\mu$
         mu = self.mu_head(hidden)
@@ -166,7 +166,7 @@ class DecoderRNN(nn.Module):
         self.dec_hidden_size = dec_hidden_size
 
     def forward(self, x: torch.Tensor, z: torch.Tensor, state: Optional[Tuple[torch.Tensor, torch.Tensor]]):
-        print(f"DecoderRNN.forward - x={x.shape}")
+        #print(f"DecoderRNN.forward - x={x.shape}")
 
         # Calculate the initial state
         if state is None:
@@ -175,26 +175,26 @@ class DecoderRNN(nn.Module):
             # `h` and `c` have shapes `[batch_size, lstm_size]`. We want to shape them
             # to `[1, batch_size, lstm_size]` because that's the shape used in LSTM.
             
-            # print(f"DecoderRNN: {h.shape}, {c.shape}")
+            # #print(f"DecoderRNN: {h.shape}, {c.shape}")
             if self.lstm_impl=="builtin":
                 state = (h.unsqueeze(0).contiguous(), c.unsqueeze(0).contiguous())
             elif self.lstm_impl=="custom":
                 state = (h, c)
             else:
                 raise NotImplementedError()
-            # print(f"DecoderRNN: {state[0].shape}, {state[1].shape}")
-        print(f"DecoderRNN.forward - state[0]={state[0].shape}")
-        print(f"DecoderRNN.forward - state[1]={state[1].shape}")
+            # #print(f"DecoderRNN: {state[0].shape}, {state[1].shape}")
+        #print(f"DecoderRNN.forward - state[0]={state[0].shape}")
+        #print(f"DecoderRNN.forward - state[1]={state[1].shape}")
 
         # Run the LSTM
         outputs, state = self.lstm(x, state)
-        print(f"outputs: {outputs.shape}")
+        #print(f"outputs: {outputs.shape}")
 
-        print(outputs[:5,0,:4])
+        #print(outputs[:5,0,:4])
 
         # Get $\log(q)$
         q_logits = self.q_log_softmax(self.q_head(outputs))
-        print(f"q_logits: {q_logits.shape}")
+        #print(f"q_logits: {q_logits.shape}")
 
         # Get $(\hat{\Pi_i}, \mu_{x,i}, \mu_{y,i}, \hat{\sigma_{x,i}},
         # \hat{\sigma_{y,i}} \hat{\rho_{xy,i}})$.
