@@ -14,7 +14,7 @@ from PIL import Image
 from torch import optim
 from torch.utils.data import DataLoader
 
-from .dataset import StrokesDataset
+from .dataset import StrokesDataset, random_scale, augment_strokes
 from .model import DecoderRNN, EncoderRNN, KLDivLoss, ReconstructionLoss
 from .sampler import Sampler
 
@@ -44,6 +44,11 @@ class HParams():
     # layer normalization
     use_layer_norm = True
     layer_norm_learnable = False
+
+    # data augmentation
+    augment_stroke_prob = 0.1
+    use_random_scale = True
+    random_scale_factor = 0.15
 
     # lstm_impl = "builtin"
     lstm_impl = "custom"
@@ -184,8 +189,36 @@ class Trainer():
         # Create validation dataset
         self.valid_dataset = StrokesDataset(dataset['valid'], self.hp.max_seq_length, self.train_dataset.scale)
 
+        def collate_fn(batch, **kwargs):
+            assert type(batch) == list
+            # assert len(batch) == self.hp.batch_size
+
+            all_data = []
+            all_mask = []
+            for data, mask in batch:
+                assert data.shape[0] == self.hp.max_seq_length + 2
+                assert data.shape[1] == 5
+                assert len(data.shape) == 2
+                assert mask.shape[0] == self.hp.max_seq_length + 1
+                assert len(mask.shape) == 1
+
+                _data = data
+                if self.hp.use_random_scale:
+                    _data = random_scale(data, self.hp.random_scale_factor)
+
+                if self.hp.augment_stroke_prob > 0:
+                    _data = augment_strokes(_data, self.hp.augment_stroke_prob)
+
+                all_data.append(data)
+                all_mask.append(mask)
+
+
+            # print(f"collate - batch: {len(batch)}, {batch[0][0].shape}, {batch[0][1].shape}")
+            # print(f"collate - kwargs: {kwargs}")
+            return torch.stack(all_data), torch.stack(all_mask)
+
         # Create training data loader
-        self.train_loader = DataLoader(self.train_dataset, self.hp.batch_size, shuffle=True)
+        self.train_loader = DataLoader(self.train_dataset, self.hp.batch_size, shuffle=True, collate_fn=collate_fn)
         # Create validation data loader
         self.valid_loader = DataLoader(self.valid_dataset, self.hp.batch_size)
 

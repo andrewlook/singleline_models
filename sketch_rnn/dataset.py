@@ -6,6 +6,43 @@ import torch
 from torch.utils.data import Dataset
 
 
+def random_scale(data, random_scale_factor=0.15):
+    """Augment data by stretching x and y axis randomly [1-e, 1+e]."""
+    x_scale_factor = (
+        np.random.random() - 0.5) * 2 * random_scale_factor + 1.0
+    y_scale_factor = (
+        np.random.random() - 0.5) * 2 * random_scale_factor + 1.0
+    result = np.copy(data)
+    result[:, 0] *= x_scale_factor
+    result[:, 1] *= y_scale_factor
+    return result
+
+
+def augment_strokes(strokes, prob=0.0):
+    """Perform data augmentation by randomly dropping out strokes."""
+    # drop each point within a line segments with a probability of prob
+    # note that the logic in the loop prevents points at the ends to be dropped.
+    result = []
+    prev_stroke = [0, 0, 1]
+    count = 0
+    stroke = [0, 0, 1]  # Added to be safe.
+    for i in range(len(strokes)):
+        candidate = [strokes[i][0], strokes[i][1], strokes[i][2]]
+        if candidate[2] == 1 or prev_stroke[2] == 1:
+            count = 0
+        else:
+            count += 1
+        urnd = np.random.rand()  # uniform random variable
+        if candidate[2] == 0 and prev_stroke[2] == 0 and count > 2 and urnd < prob:
+            stroke[0] += candidate[0]
+            stroke[1] += candidate[1]
+        else:
+            stroke = candidate
+            prev_stroke = stroke
+            result.append(stroke)
+    return np.array(result)
+
+
 class StrokesDataset(Dataset):
     """
     ## Dataset
@@ -25,15 +62,20 @@ class StrokesDataset(Dataset):
 
         data = []
         # We iterate through each of the sequences and filter
-        for seq in dataset:
-            # Filter if the length of the sequence of strokes is within our range
-            if 10 < len(seq) <= max_seq_length:
-                # Clamp $\Delta x$, $\Delta y$ to $[-1000, 1000]$
-                seq = np.minimum(seq, 1000)
-                seq = np.maximum(seq, -1000)
-                # Convert to a floating point array and add to `data`
-                seq = np.array(seq, dtype=np.float32)
-                data.append(seq)
+        for idx, seq in enumerate(dataset):
+            if len(seq) < 10:
+                print(f"filtering out {idx} - length: {len(seq)}")
+                continue
+            elif len(seq) > max_seq_length:
+                print(f"truncating {idx} - length: {len(seq)}")
+                seq = seq[:max_seq_length]
+            # Clamp $\Delta x$, $\Delta y$ to $[-1000, 1000]$
+            seq = np.minimum(seq, 1000)
+            seq = np.maximum(seq, -1000)
+            # Convert to a floating point array and add to `data`
+            seq = np.array(seq, dtype=np.float32)
+            data.append(seq)
+        print(f"finished filtering - len(dataset) = {len(dataset)}, len(data) = {len(data)}")
 
         # We then calculate the scaling factor which is the
         # standard deviation of ($\Delta x$, $\Delta y$) combined.
