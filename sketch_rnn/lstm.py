@@ -26,7 +26,7 @@ from collections import namedtuple
 from typing import List, Tuple
 
 import torch
-import torch.jit as jit
+# import torch.jit as jit
 import torch.nn as nn
 from torch import Tensor
 from torch.nn import Parameter
@@ -118,7 +118,8 @@ def reverse(lst: List[Tensor]) -> List[Tensor]:
     return lst[::-1]
 
 
-class LSTMCell(jit.ScriptModule):
+class LSTMCell(nn.Module):
+# class LSTMCell(jit.ScriptModule):
     def __init__(self, input_size, hidden_size):
         super().__init__()
         self.input_size = input_size
@@ -128,7 +129,7 @@ class LSTMCell(jit.ScriptModule):
         self.bias_ih = Parameter(torch.randn(4 * hidden_size))
         self.bias_hh = Parameter(torch.randn(4 * hidden_size))
 
-    @jit.script_method
+    # @jit.script_method
     def forward(
         self, input: Tensor, state: Tuple[Tensor, Tensor]
     ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
@@ -152,111 +153,131 @@ class LSTMCell(jit.ScriptModule):
         return hy, (hy, cy)
 
 
-class LayerNorm(jit.ScriptModule):
-    def __init__(self, normalized_shape):
-        super().__init__()
-        if isinstance(normalized_shape, numbers.Integral):
-            normalized_shape = (normalized_shape,)
-        normalized_shape = torch.Size(normalized_shape)
+# class LayerNorm(jit.ScriptModule):
+#     def __init__(self, normalized_shape):
+#         super().__init__()
+#         if isinstance(normalized_shape, numbers.Integral):
+#             normalized_shape = (normalized_shape,)
+#         normalized_shape = torch.Size(normalized_shape)
 
-        # XXX: This is true for our LSTM / NLP use case and helps simplify code
-        assert len(normalized_shape) == 1
+#         # XXX: This is true for our LSTM / NLP use case and helps simplify code
+#         assert len(normalized_shape) == 1
 
-        self.weight = Parameter(torch.ones(normalized_shape))
-        self.bias = Parameter(torch.zeros(normalized_shape))
-        self.normalized_shape = normalized_shape
+#         self.weight = Parameter(torch.ones(normalized_shape))
+#         self.bias = Parameter(torch.zeros(normalized_shape))
+#         self.normalized_shape = normalized_shape
 
-    @jit.script_method
-    def compute_layernorm_stats(self, input):
-        mu = input.mean(-1, keepdim=True)
-        sigma = input.std(-1, keepdim=True, unbiased=False)
-        return mu, sigma
+#     @jit.script_method
+#     def compute_layernorm_stats(self, input):
+#         mu = input.mean(-1, keepdim=True)
+#         sigma = input.std(-1, keepdim=True, unbiased=False)
+#         return mu, sigma
 
-    @jit.script_method
-    def forward(self, input):
-        mu, sigma = self.compute_layernorm_stats(input)
-        return (input - mu) / sigma * self.weight + self.bias
-
-
-class LayerNormLSTMCell(jit.ScriptModule):
-    def __init__(self, input_size, hidden_size, decompose_layernorm=False):
-        super().__init__()
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.weight_ih = Parameter(torch.randn(4 * hidden_size, input_size))
-        self.weight_hh = Parameter(torch.randn(4 * hidden_size, hidden_size))
-        # The layernorms provide learnable biases
-
-        if decompose_layernorm:
-            ln = LayerNorm
-        else:
-            ln = nn.LayerNorm
-
-        self.layernorm_i = ln(4 * hidden_size)
-        self.layernorm_h = ln(4 * hidden_size)
-        self.layernorm_c = ln(hidden_size)
-
-    @jit.script_method
-    def forward(
-        self, input: Tensor, state: Tuple[Tensor, Tensor]
-    ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
-        hx, cx = state
-        igates = self.layernorm_i(torch.mm(input, self.weight_ih.t()))
-        hgates = self.layernorm_h(torch.mm(hx, self.weight_hh.t()))
-        gates = igates + hgates
-        ingate, forgetgate, cellgate, outgate = gates.chunk(4, 1)
-
-        ingate = torch.sigmoid(ingate)
-        forgetgate = torch.sigmoid(forgetgate)
-        cellgate = torch.tanh(cellgate)
-        outgate = torch.sigmoid(outgate)
-
-        cy = self.layernorm_c((forgetgate * cx) + (ingate * cellgate))
-        hy = outgate * torch.tanh(cy)
-
-        return hy, (hy, cy)
+#     @jit.script_method
+#     def forward(self, input):
+#         mu, sigma = self.compute_layernorm_stats(input)
+#         return (input - mu) / sigma * self.weight + self.bias
 
 
-class LSTMLayer(jit.ScriptModule):
+# class LayerNormLSTMCell(nn.Module):
+# # class LayerNormLSTMCell(jit.ScriptModule):
+#     def __init__(self, input_size, hidden_size, decompose_layernorm=False):
+#         super().__init__()
+#         self.input_size = input_size
+#         self.hidden_size = hidden_size
+#         self.weight_ih = Parameter(torch.randn(4 * hidden_size, input_size))
+#         self.weight_hh = Parameter(torch.randn(4 * hidden_size, hidden_size))
+#         # The layernorms provide learnable biases
+
+#         if decompose_layernorm:
+#             ln = LayerNorm
+#         else:
+#             ln = nn.LayerNorm
+
+#         self.layernorm_i = ln(4 * hidden_size)
+#         self.layernorm_h = ln(4 * hidden_size)
+#         self.layernorm_c = ln(hidden_size)
+
+#     # @jit.script_method
+#     def forward(
+#         self, input: Tensor, state: Tuple[Tensor, Tensor]
+#     ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
+#         hx, cx = state
+#         igates = self.layernorm_i(torch.mm(input, self.weight_ih.t()))
+#         hgates = self.layernorm_h(torch.mm(hx, self.weight_hh.t()))
+#         gates = igates + hgates
+#         ingate, forgetgate, cellgate, outgate = gates.chunk(4, 1)
+
+#         ingate = torch.sigmoid(ingate)
+#         forgetgate = torch.sigmoid(forgetgate)
+#         cellgate = torch.tanh(cellgate)
+#         outgate = torch.sigmoid(outgate)
+
+#         cy = self.layernorm_c((forgetgate * cx) + (ingate * cellgate))
+#         hy = outgate * torch.tanh(cy)
+
+#         return hy, (hy, cy)
+
+
+# class LSTMLayer(jit.ScriptModule):
+class LSTMLayer(nn.Module):
     def __init__(self, cell, *cell_args):
         super().__init__()
         self.cell = cell(*cell_args)
 
-    @jit.script_method
+    # @jit.script_method
     def forward(
         self, input: Tensor, state: Tuple[Tensor, Tensor]
     ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
-        print(input.shape)
-        print(state[0].shape)
-        print(state[1].shape)
-
+        print(f"LSTMLayer: input={input.shape}")
+        print(input[:5,0,:5])
+        print(f"LSTMLayer: state[0]={state[0].shape}")
+        print(state[0][:5,:5])
+        print(f"LSTMLayer: state[1]={state[1].shape}")
+        print(state[0][:5,:5])
+        
         inputs = input.unbind(0)
-        outputs = torch.jit.annotate(List[Tensor], [])
+        outputs = []
+        # outputs = torch.jit.annotate(List[Tensor], [])
+        
         for i in range(len(inputs)):
             out, state = self.cell(inputs[i], state)
             outputs += [out]
+
+            if i < 10:
+                print(f"LSTMCell - input {i}")
+                print(f"out.shape={out.shape}")
+                print(out[:3,:3])
+                print(f"state[0].shape={state[0].shape}")
+                print(state[0][:3,:3])
+                print(f"state[1].shape={state[1].shape}")
+                print(state[1][:3,:3])
+            
         return torch.stack(outputs), state
 
 
-class ReverseLSTMLayer(jit.ScriptModule):
+# class ReverseLSTMLayer(jit.ScriptModule):
+class ReverseLSTMLayer(nn.Module):
     def __init__(self, cell, *cell_args):
         super().__init__()
         self.cell = cell(*cell_args)
 
-    @jit.script_method
+    # @jit.script_method
     def forward(
         self, input: Tensor, state: Tuple[Tensor, Tensor]
     ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
         inputs = reverse(input.unbind(0))
-        outputs = jit.annotate(List[Tensor], [])
+        outputs = []
+        # outputs = jit.annotate(List[Tensor], [])
         for i in range(len(inputs)):
             out, state = self.cell(inputs[i], state)
             outputs += [out]
         return torch.stack(reverse(outputs)), state
 
 
-class BidirLSTMLayer(jit.ScriptModule):
-    __constants__ = ["directions"]
+class BidirLSTMLayer(nn.Module):
+# class BidirLSTMLayer(jit.ScriptModule):
+    # __constants__ = ["directions"]
 
     def __init__(self, cell, *cell_args):
         super().__init__()
@@ -267,13 +288,16 @@ class BidirLSTMLayer(jit.ScriptModule):
             ]
         )
 
-    @jit.script_method
+    # @jit.script_method
     def forward(
         self, input: Tensor, states: List[Tuple[Tensor, Tensor]]
     ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
         # List[LSTMState]: [forward LSTMState, backward LSTMState]
-        outputs = jit.annotate(List[Tensor], [])
-        output_states = jit.annotate(List[Tuple[Tensor, Tensor]], [])
+        outputs = []
+        output_states = []
+        # outputs = jit.annotate(List[Tensor], [])
+        # output_states = jit.annotate(List[Tuple[Tensor, Tensor]], [])
+
         # XXX: enumerate https://github.com/pytorch/pytorch/issues/14471
         i = 0
         for direction in self.directions:

@@ -5,7 +5,7 @@ import einops
 import torch
 import torch.nn as nn
 
-from .lstm import BidirLSTMLayer, LayerNormLSTMCell, LSTMCell, LSTMLayer
+from .lstm import BidirLSTMLayer, LSTMCell, LSTMLayer  # , LayerNormLSTMCell
 
 
 def lstm_layer(ni,
@@ -24,8 +24,8 @@ def lstm_layer(ni,
     elif lstm_impl == 'custom':
         assert not use_recurrent_dropout
         layer_cls = BidirLSTMLayer if bidirectional else LSTMLayer
-        cell_cls = LayerNormLSTMCell if use_layer_norm else LSTMCell
-        print(layer_cls, cell_cls, ni, nh)
+        cell_cls = LSTMCell #LayerNormLSTMCell if use_layer_norm else LSTMCell
+        # print(layer_cls, cell_cls, ni, nh)
         # extra_cell_args = []
         # decompose_layernorm = False # whether to use custom layernorm implementation
         return layer_cls(cell_cls, ni, nh)
@@ -61,15 +61,19 @@ class EncoderRNN(nn.Module):
                                layer_norm_learnable=layer_norm_learnable,
                                lstm_impl="builtin")
                             #    lstm_impl=lstm_impl)
+        print(f"EncoderRNN.__init__: {self.lstm}")
         # Head to get $\mu$
         self.mu_head = nn.Linear(2 * enc_hidden_size, d_z)
         # Head to get $\hat{\sigma}$
         self.sigma_head = nn.Linear(2 * enc_hidden_size, d_z)
 
     def forward(self, inputs: torch.Tensor, state=None):
+        print(f"EncoderRNN.forward: {self.lstm}")
         """
         inputs will have shape `[seq_len, batch_size, 5]`
         """
+        print(f"EncoderRNN.forward: inputs={inputs.shape}")
+        print(inputs[:5,0,:5])
         if state is None:
             num_directions = 2
             max_batch_size = inputs.shape[1]
@@ -80,6 +84,10 @@ class EncoderRNN(nn.Module):
                                   max_batch_size, self.enc_hidden_size,
                                   dtype=inputs.dtype, device=inputs.device)
             state = (h_zeros, c_zeros)
+        print(f"EncoderRNN.forward: state[0]={state[0].shape}")
+        print(state[0][:5,:5])
+        print(f"EncoderRNN.forward: state[1]={state[1].shape}")
+        print(state[1][:5,:5])
         # The hidden state of the bidirectional LSTM is the concatenation of the
         # output of the last token in the forward direction and
         # first token in the reverse direction, which is what we want.
@@ -102,7 +110,7 @@ class EncoderRNN(nn.Module):
         # $\sigma = \exp(\frac{\hat{\sigma}}{2})$
         sigma = torch.exp(sigma_hat / 2.)
 
-        # Sample $z = \mu + \sigma \cdot \mathcal{N}(0, I)$
+        # Sample $z = \mu + \sigma \cdot \mathcal{N}(1, I)$
         z = mu + sigma * torch.normal(mu.new_zeros(mu.shape), mu.new_ones(mu.shape))
         return z, mu, sigma_hat
 

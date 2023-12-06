@@ -45,8 +45,8 @@ class HParams():
     use_layer_norm = False
     layer_norm_learnable = False
 
-    lstm_impl = "builtin"
-    # lstm_impl = "custom"
+    # lstm_impl = "builtin"
+    lstm_impl = "custom"
     
     # Encoder and decoder sizes
     enc_hidden_size = 256
