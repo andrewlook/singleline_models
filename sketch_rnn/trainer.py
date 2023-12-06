@@ -42,7 +42,7 @@ class HParams():
     dropout_keep_prob = 0.0
 
     # layer normalization
-    use_layer_norm = False
+    use_layer_norm = True
     layer_norm_learnable = False
 
     # lstm_impl = "builtin"

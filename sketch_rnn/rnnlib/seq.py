@@ -379,6 +379,12 @@ class LayerNormLSTMCell(nn.Module):
         :returns: hidden and cell
         """
         hidden_tensor, cell_tensor = state
+        
+        assert len(input.shape) == 2
+        if len(hidden_tensor.shape) == 3:
+            hidden_tensor = hidden_tensor.squeeze(0)
+        if len(cell_tensor.shape) == 3:
+            cell_tensor = cell_tensor.squeeze(0)
 
         fiou_linear = self.fiou_linear(
             torch.cat([input, hidden_tensor], dim=1))

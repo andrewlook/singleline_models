@@ -23,6 +23,9 @@ def lstm_layer(ni,
         assert not layer_norm_learnable
         return nn.LSTM(ni, nh, bidirectional=bidirectional)
     elif lstm_impl == 'custom':
+        if use_layer_norm:
+            return LayerNormLSTM(ni, nh, num_layers=1, bidirectional=bidirectional, layer_norm_enabled=True)
+            
         assert not use_recurrent_dropout
 
         rnn_cells = [[LSTMCell(ni, nh), LSTMCell(ni, nh)]] if bidirectional else [LSTMCell(ni, nh)]        
