@@ -6,3 +6,5 @@ eionops
 fastprogress
 wandb
 onnx
+faiss
+transformers
