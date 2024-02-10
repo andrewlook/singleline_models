@@ -226,8 +226,11 @@ class Trainer():
             Path(self.run_dir) / f'runid-{self.run_id}_epoch-{epoch:05d}_decoderRNN.pth')
 
     def load(self, epoch):
-        saved_encoder = torch.load(Path(self.run_dir) / f'runid-{self.run_id}_epoch-{epoch:05d}_encoderRNN.pth')
-        saved_decoder = torch.load(Path(self.run_dir) / f'runid-{self.run_id}_epoch-{epoch:05d}_decoderRNN.pth')
+        extra_args = {}
+        if self.device != 'cuda':
+            extra_args=dict(map_location=torch.device('cpu'))
+        saved_encoder = torch.load(Path(self.run_dir) / f'runid-{self.run_id}_epoch-{epoch:05d}_encoderRNN.pth', **extra_args)
+        saved_decoder = torch.load(Path(self.run_dir) / f'runid-{self.run_id}_epoch-{epoch:05d}_decoderRNN.pth', **extra_args)
         self.encoder.load_state_dict(saved_encoder)
         self.decoder.load_state_dict(saved_decoder)
     
