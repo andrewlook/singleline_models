@@ -17,7 +17,7 @@ class Sampler:
         self.decoder = decoder
         self.encoder = encoder
 
-    def sample(self, data: torch.Tensor, temperature: float, fpath: str):
+    def sample(self, data: torch.Tensor, temperature: float, fpath: str = None):
         # $N_{max}$
         longest_seq_len = len(data)
 
@@ -52,7 +52,7 @@ class Sampler:
         seq = torch.stack(seq)
 
         # Plot the sequence of strokes
-        self.plot(seq, fpath)
+        self.plot(seq, fpath=fpath)
 
     @staticmethod
     def _sample_step(dist: BivariateGaussianMixture, q_logits: torch.Tensor, temperature: float):
@@ -81,7 +81,7 @@ class Sampler:
         return stroke
 
     @staticmethod
-    def plot(_seq: torch.Tensor, fpath: str):
+    def plot(_seq: torch.Tensor, fpath = None):
         seq = torch.zeros_like(_seq)
         # Take the cumulative sums of $(\Delta x, \Delta y)$ to get $(x, y)$
         seq[:, 0:2] = torch.cumsum(_seq[:, 0:2], dim=0)
@@ -99,9 +99,10 @@ class Sampler:
         # Don't show axes
         plt.axis('off')
 
-        # # Show the plot
-        # plt.show()
-
+        if not fpath:
+            plt.show()
+            return
+        
         with io.BytesIO() as buf:
             plt.savefig(buf, format='png')
             plt.close()
@@ -109,4 +110,4 @@ class Sampler:
             img.save(fpath)
             buf.seek(0)
             buf.truncate()
-        return img
+            return img
