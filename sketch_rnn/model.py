@@ -56,7 +56,6 @@ class EncoderRNN(nn.Module):
         super().__init__()
         self.enc_hidden_size = enc_hidden_size
         self.lstm_impl = lstm_impl
-        # self.lstm_impl = "builtin"
         # Create a bidirectional LSTM taking a sequence of
         # $(\Delta x, \Delta y, p_1, p_2, p_3)$ as input.
         self.lstm = lstm_layer(5, enc_hidden_size, bidirectional=True,
@@ -64,36 +63,16 @@ class EncoderRNN(nn.Module):
                                r_dropout_prob=r_dropout_prob,
                                use_layer_norm=use_layer_norm,
                                layer_norm_learnable=layer_norm_learnable,
-                            #    lstm_impl="builtin")
                                lstm_impl=lstm_impl)
-        #print(f"EncoderRNN.__init__: {self.lstm}")
         # Head to get $\mu$
         self.mu_head = nn.Linear(2 * enc_hidden_size, d_z)
         # Head to get $\hat{\sigma}$
         self.sigma_head = nn.Linear(2 * enc_hidden_size, d_z)
 
     def forward(self, inputs: torch.Tensor, state=None):
-        #print(f"EncoderRNN.forward: {self.lstm}")
         """
         inputs will have shape `[seq_len, batch_size, 5]`
         """
-        #print(f"EncoderRNN.forward: inputs={inputs.shape}")
-        #print(inputs[:5,0,:5])
-        # if state is None:
-        #     num_directions = 2
-        #     max_batch_size = inputs.shape[1]
-        #     h_zeros = torch.zeros(num_directions,
-        #                           max_batch_size, self.enc_hidden_size,
-        #                           dtype=inputs.dtype, device=inputs.device)
-        #     c_zeros = torch.zeros(num_directions,
-        #                           max_batch_size, self.enc_hidden_size,
-        #                           dtype=inputs.dtype, device=inputs.device)
-        #     state = (h_zeros, c_zeros)
-        
-        # #print(f"EncoderRNN.forward: state[0]={state[0].shape}")
-        # #print(state[0][:5,:5])
-        # #print(f"EncoderRNN.forward: state[1]={state[1].shape}")
-        # #print(state[1][:5,:5])
         
         # The hidden state of the bidirectional LSTM is the concatenation of the
         # output of the last token in the forward direction and
@@ -106,9 +85,6 @@ class EncoderRNN(nn.Module):
         # where the first dimension is the direction.
         # We rearrange it to get $h = [h_{\rightarrow}; h_{\leftarrow}]$
         hidden = einops.rearrange(hidden, 'fb b h -> b (fb h)')
-
-        #print(f'EncoderRNN - hidden: {hidden.shape}')
-        #print(hidden[:5,:4])
 
         # $\mu$
         mu = self.mu_head(hidden)
@@ -123,11 +99,6 @@ class EncoderRNN(nn.Module):
 
 
 class DecoderRNN(nn.Module):
-    """
-    ## Decoder module
-
-    This consists of a LSTM
-    """
 
     def __init__(self,
                  d_z: int,
@@ -148,7 +119,6 @@ class DecoderRNN(nn.Module):
                             #    lstm_impl="builtin")
                                lstm_impl=lstm_impl)
         self.lstm_impl = lstm_impl
-        # self.lstm_impl = "builtin" #lstm_impl
 
         # Initial state of the LSTM is $[h_0; c_0] = \tanh(W_{z}z + b_z)$.
         # `init_state` is the linear transformation for this
@@ -170,35 +140,22 @@ class DecoderRNN(nn.Module):
         self.dec_hidden_size = dec_hidden_size
 
     def forward(self, x: torch.Tensor, z: torch.Tensor, state: Optional[Tuple[torch.Tensor, torch.Tensor]]):
-        #print(f"DecoderRNN.forward - x={x.shape}")
-
-        # Calculate the initial state
         if state is None:
             # $[h_0; c_0] = \tanh(W_{z}z + b_z)$
             h, c = torch.split(torch.tanh(self.init_state(z)), self.dec_hidden_size, 1)
             # `h` and `c` have shapes `[batch_size, lstm_size]`. We want to shape them
             # to `[1, batch_size, lstm_size]` because that's the shape used in LSTM.
             
-            # #print(f"DecoderRNN: {h.shape}, {c.shape}")
             if self.lstm_impl=="builtin":
                 state = (h.unsqueeze(0).contiguous(), c.unsqueeze(0).contiguous())
             elif self.lstm_impl=="custom":
                 state = (h, c)
             else:
                 raise NotImplementedError()
-            # #print(f"DecoderRNN: {state[0].shape}, {state[1].shape}")
-        #print(f"DecoderRNN.forward - state[0]={state[0].shape}")
-        #print(f"DecoderRNN.forward - state[1]={state[1].shape}")
-
-        # Run the LSTM
         outputs, state = self.lstm(x, state)
-        #print(f"outputs: {outputs.shape}")
-
-        #print(outputs[:5,0,:4])
 
         # Get $\log(q)$
         q_logits = self.q_log_softmax(self.q_head(outputs))
-        #print(f"q_logits: {q_logits.shape}")
 
         # Get $(\hat{\Pi_i}, \mu_{x,i}, \mu_{y,i}, \hat{\sigma_{x,i}},
         # \hat{\sigma_{y,i}} \hat{\rho_{xy,i}})$.
