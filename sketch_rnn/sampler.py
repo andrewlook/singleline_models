@@ -81,7 +81,7 @@ class Sampler:
         return stroke
 
     @staticmethod
-    def plot(_seq: torch.Tensor, fpath = None):
+    def plot(_seq: torch.Tensor, fpath = None, figsize=(6,6)):
         seq = torch.zeros_like(_seq)
         # Take the cumulative sums of $(\Delta x, \Delta y)$ to get $(x, y)$
         seq[:, 0:2] = torch.cumsum(_seq[:, 0:2], dim=0)
@@ -93,9 +93,12 @@ class Sampler:
         # i.e. split the array of strokes at the points where the pen is lifted from the paper.
         # This gives a list of sequence of strokes.
         strokes = np.split(seq, np.where(seq[:, 2] > 0)[0] + 1)
+
+        fig = plt.figure(figsize=figsize)
+
         # Plot each sequence of strokes
         for s in strokes:
-            plt.plot(s[:, 0], -s[:, 1])
+            plt.plot(s[:, 0], -s[:, 1], figure=fig)
         # Don't show axes
         plt.axis('off')
 
