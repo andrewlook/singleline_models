@@ -375,4 +375,4 @@ class Trainer():
                 #if epoch % self.hp.save_every_n_epochs == 0:
                 self.save(epoch=0)
                 self.sample(epoch=0)
-            mb.write(f'Finished epoch {epoch}. Validation Loss: {val_avg_loss}{' (new best)' if update_best_val else ''}')
+            mb.write(f"Finished epoch {epoch}. Validation Loss: {val_avg_loss}{' (new best)' if update_best_val else ''}")
