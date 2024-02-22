@@ -369,8 +369,8 @@ class Trainer():
             self.train_one_epoch(epoch=epoch, parent_progressbar=mb)
             val_avg_loss, *_ = self.validate_one_epoch(epoch)
             update_best_val = False
-            if val_avg_loss.item() < self.best_val_loss:
-                self.best_val_loss = val_avg_loss.item()
+            if val_avg_loss < self.best_val_loss:
+                self.best_val_loss = val_avg_loss
                 update_best_val = True
                 #if epoch % self.hp.save_every_n_epochs == 0:
                 self.save(epoch=0)
