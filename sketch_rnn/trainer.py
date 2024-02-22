@@ -103,6 +103,8 @@ class Trainer():
 
     learning_rate: float
 
+    best_val_loss: float = float('inf')
+
     def __init__(self,
                  hp: HParams,
                  device="cuda",
@@ -366,7 +368,11 @@ class Trainer():
         for epoch in mb:
             self.train_one_epoch(epoch=epoch, parent_progressbar=mb)
             val_avg_loss, *_ = self.validate_one_epoch(epoch)
-            if epoch % self.hp.save_every_n_epochs == 0:
-                self.save(epoch)
-                self.sample(epoch)
-            mb.write(f'Finished epoch {epoch}. Validation Loss: {val_avg_loss}')
+            update_best_val = False
+            if val_avg_loss.item() < self.best_val_loss:
+                self.best_val_loss = val_avg_loss.item()
+                update_best_val = True
+                #if epoch % self.hp.save_every_n_epochs == 0:
+                self.save(epoch=0)
+                self.sample(epoch=0)
+            mb.write(f'Finished epoch {epoch}. Validation Loss: {val_avg_loss}{' (new best)' if update_best_val else ''}')
