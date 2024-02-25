@@ -5,8 +5,9 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
+from .layers import (DecoderLayer, DenseExpander, EncoderLayer,
+                     PositionalEncoding, SelfAttn)
 
-from .layers import DenseExpander, PositionalEncoding, EncoderLayer, DecoderLayer, SelfAttn
 
 class Encoder(nn.Module):
     def __init__(self, num_layers, d_model, num_heads, d_ff, max_seq_len, dropout_rate):
@@ -27,7 +28,7 @@ class Encoder(nn.Module):
         x = self.pos_encoding(x)
 
         for i, layer in enumerate(self.enc_layers):
-        x = layer(x, mask)
+            x = layer(x, mask)
         return x # (batch, seq, d_model)
   
 
@@ -56,7 +57,7 @@ class Decoder(nn.Module):
 
         attention_weights = {}
         for i, layer in enumerate(self.dec_layers):
-        x, block1, block2 = layer(x, enc_output, padding_mask, dec_target_padding_mask, look_ahead_mask)
+            x, block1, block2 = layer(x, enc_output, padding_mask, dec_target_padding_mask, look_ahead_mask)
 
         attention_weights['decoder_layer{}_block1'.format(i + 1)] = block1
         attention_weights['decoder_layer{}_block2'.format(i + 1)] = block2
