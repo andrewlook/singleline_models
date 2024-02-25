@@ -56,7 +56,7 @@ class Trainer():
             run = wandb.init(
                 project=wandb_project,
                 entity=wandb_entity,
-                config=hp.__dict__(),
+                config=hp.__dict__,
             )
             # use wandb's run ID, if available, so checkpoints match W&B's dashboard ID
             self.run_id = run.id
@@ -64,7 +64,7 @@ class Trainer():
         print('='*60)
         print(f"RUN_ID: {self.run_id}\n")
         print(f"HYPERPARAMETERS:\n")
-        print(json.dumps(hp.__dict__(), indent=2))
+        print(json.dumps(hp.__dict__, indent=2))
         print('='*60 + '\n\n')
 
         self.models_dir = Path(models_dir)

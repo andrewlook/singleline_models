@@ -75,7 +75,7 @@ class Model(nn.Module):
             d_model=hp.d_model,
             num_heads=hp.n_head,
             d_ff=hp.d_ff,
-            maximum_position_encoding=hp.max_seq_length+2,
+            max_seq_len=hp.max_seq_length+2,
             dropout_rate=hp.dropout_rate)
         self.bottleneck_layer = SelfAttn(d_model=hp.d_model, d_lowerdim=hp.d_lowerdim)
         self.expand_layer = DenseExpander(in_dim=hp.d_lowerdim, out_dim=hp.d_model, seq_len=hp.max_seq_length+2)
@@ -83,7 +83,7 @@ class Model(nn.Module):
             d_model=hp.d_model,
             num_heads=hp.n_head,
             d_ff=hp.d_ff,
-            maximum_position_encoding=hp.max_seq_length+2,
+            max_seq_len=hp.max_seq_length+2,
             dropout_rate=hp.dropout_rate)
         self.output_layer = nn.Linear(hp.d_model, 5)
     
