@@ -14,11 +14,11 @@ from PIL import Image
 from torch import optim
 from torch.utils.data import DataLoader
 
-from sketch_transformer.config import get_default_config
-from sketch_transformer.dataset import StrokesDataset
-from sketch_transformer.masks import create_masks
-from sketch_transformer.model import Model, ReconstructionLoss
-from sketch_transformer.utils import CN
+from .config import get_default_config
+from .dataset import StrokesDataset
+from .masks import create_masks
+from .model import Model, ReconstructionLoss
+from .utils import CN
 
 # from .sampler import Sampler
 
@@ -26,7 +26,7 @@ class Trainer():
     # Device configurations to pick the device to run the experiment
     device: str
     
-    model: SketchTransformer
+    model: Model
     loss: ReconstructionLoss
     optimizer: optim.Adam
     # sampler: Sampler

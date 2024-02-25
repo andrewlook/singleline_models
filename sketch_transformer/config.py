@@ -1,4 +1,5 @@
-from sketch_transformer.utils import CN
+from .utils import CN
+
 
 def get_default_config():
     C = CN()

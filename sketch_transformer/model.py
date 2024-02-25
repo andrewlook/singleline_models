@@ -6,7 +6,7 @@ import torch.nn as nn
 from torch.nn import functional as F
 
 
-from sketch_transformer.layers import DenseExpander, PositionalEncoding, EncoderLayer, DecoderLayer, SelfAttn
+from .layers import DenseExpander, PositionalEncoding, EncoderLayer, DecoderLayer, SelfAttn
 
 class Encoder(nn.Module):
     def __init__(self, num_layers, d_model, num_heads, d_ff, max_seq_len, dropout_rate):
