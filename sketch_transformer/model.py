@@ -66,55 +66,55 @@ class Decoder(nn.Module):
     
 
 class Model(nn.Module):
-  def __init__(self, hp):
-    super().__init__()
-    self.hp = hp
-    self.encoder = Encoder(
-        num_layers=hp.n_layer,
-        d_model=hp.d_model,
-        num_heads=hp.n_head,
-        d_ff=hp.d_ff,
-        maximum_position_encoding=hp.max_seq_length+2,
-        dropout_rate=hp.dropout_rate)
-    self.bottleneck_layer = SelfAttn(d_model=hp.d_model, d_lowerdim=hp.d_lowerdim)
-    self.expand_layer = DenseExpander(in_dim=hp.d_lowerdim, out_dim=hp.d_model, seq_len=hp.max_seq_length+2)
-    self.decoder = Decoder(num_layers=hp.n_layer,
-        d_model=hp.d_model,
-        num_heads=hp.n_head,
-        d_ff=hp.d_ff,
-        maximum_position_encoding=hp.max_seq_length+2,
-        dropout_rate=hp.dropout_rate)
-    self.output_layer = nn.Linear(hp.d_model, 5)
-  
-  def encode(self, x, mask):
-    enc_output = self.encoder(x, mask)
-    lowerdim_output, _ = self.bottleneck_layer(enc_output)
-    return lowerdim_output, enc_output
-  
-  def decode(self, embedding, target, dec_padding_mask, dec_target_padding_mask, look_ahead_mask):
-    """Generate logits"""
-    padding_mask = torch.zeros_like(dec_padding_mask) if self.hp.blind_decoder_mask else dec_padding_mask
-    pre_decoder = self.expand_layer(embedding)
-    dec_output, attention_weights = self.decoder(target, pre_decoder, padding_mask, dec_target_padding_mask, look_ahead_mask)
-    final_output = self.output_layer(dec_output)
-    return final_output, attention_weights
+    def __init__(self, hp):
+        super().__init__()
+        self.hp = hp
+        self.encoder = Encoder(
+            num_layers=hp.n_layer,
+            d_model=hp.d_model,
+            num_heads=hp.n_head,
+            d_ff=hp.d_ff,
+            maximum_position_encoding=hp.max_seq_length+2,
+            dropout_rate=hp.dropout_rate)
+        self.bottleneck_layer = SelfAttn(d_model=hp.d_model, d_lowerdim=hp.d_lowerdim)
+        self.expand_layer = DenseExpander(in_dim=hp.d_lowerdim, out_dim=hp.d_model, seq_len=hp.max_seq_length+2)
+        self.decoder = Decoder(num_layers=hp.n_layer,
+            d_model=hp.d_model,
+            num_heads=hp.n_head,
+            d_ff=hp.d_ff,
+            maximum_position_encoding=hp.max_seq_length+2,
+            dropout_rate=hp.dropout_rate)
+        self.output_layer = nn.Linear(hp.d_model, 5)
+    
+    def encode(self, x, mask):
+        enc_output = self.encoder(x, mask)
+        lowerdim_output, _ = self.bottleneck_layer(enc_output)
+        return lowerdim_output, enc_output
+    
+    def decode(self, embedding, target, dec_padding_mask, dec_target_padding_mask, look_ahead_mask):
+        """Generate logits"""
+        padding_mask = torch.zeros_like(dec_padding_mask) if self.hp.blind_decoder_mask else dec_padding_mask
+        pre_decoder = self.expand_layer(embedding)
+        dec_output, attention_weights = self.decoder(target, pre_decoder, padding_mask, dec_target_padding_mask, look_ahead_mask)
+        final_output = self.output_layer(dec_output)
+        return final_output, attention_weights
 
-  def forward(self, input_seq, target_seq, enc_padding_mask, dec_padding_mask, dec_target_padding_mask, look_ahead_mask):
-    lowerdim_output, enc_output = self.encode(input_seq, enc_padding_mask)
-    final_output, attention_weights = self.decode(lowerdim_output, target_seq, dec_padding_mask, dec_target_padding_mask, look_ahead_mask)
-    return final_output, lowerdim_output #, enc_output, attention_weights
+    def forward(self, input_seq, target_seq, enc_padding_mask, dec_padding_mask, dec_target_padding_mask, look_ahead_mask):
+        lowerdim_output, enc_output = self.encode(input_seq, enc_padding_mask)
+        final_output, attention_weights = self.decode(lowerdim_output, target_seq, dec_padding_mask, dec_target_padding_mask, look_ahead_mask)
+        return final_output, lowerdim_output #, enc_output, attention_weights
 
-  # def encode_from_seq(self, inp_seq):
-  #     """same as encode but compute mask inside. Useful for test"""
-  #     dtype = tf.float32 if self.dataset.hps['use_continuous_data'] else tf.int64
-  ##
-  ## i think that last element of the tensor below is to account for train-time
-  ## shifting off-by for for input vs target...
-  ##
-  #     encoder_input = tf.cast(np.array(inp_seq) + np.zeros((1, 1)), dtype)  # why?
-  #     enc_padding_mask = builders.utils.create_padding_mask(encoder_input)
-  #     res = self.encode(encoder_input, enc_padding_mask, training=False)
-  #     return res
+    # def encode_from_seq(self, inp_seq):
+    #     """same as encode but compute mask inside. Useful for test"""
+    #     dtype = tf.float32 if self.dataset.hps['use_continuous_data'] else tf.int64
+    ##
+    ## i think that last element of the tensor below is to account for train-time
+    ## shifting off-by for for input vs target...
+    ##
+    #     encoder_input = tf.cast(np.array(inp_seq) + np.zeros((1, 1)), dtype)  # why?
+    #     enc_padding_mask = builders.utils.create_padding_mask(encoder_input)
+    #     res = self.encode(encoder_input, enc_padding_mask, training=False)
+    #     return res
   
 
 class ReconstructionLoss(nn.Module):
