@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader
 from .config import get_default_config
 from .dataset import StrokesDataset
 from .masks import create_masks
-from .model import Model, ReconstructionLoss
+from .model import *
 from .utils import CN
 
 # from .sampler import Sampler
