@@ -24,6 +24,12 @@ def get_default_config():
     # TODO: just make this a path?
     C.dataset_source = 'look'
     C.dataset_name = 'epoch20240221_expanded10x_trainval'
+
+    C.epochs = 50000
+    C.lr = 1e-3
+    C.use_lr_decay = True
+    C.min_lr = 1e-5
+    C.lr_decay = 0.9999
     
     return C
 

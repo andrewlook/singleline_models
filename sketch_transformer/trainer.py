@@ -79,7 +79,7 @@ class Trainer():
         self.loss = ReconstructionLoss()
 
         if self.use_wandb:
-            wandb.watch((self.encoder, self.decoder), log="all", log_freq=10, log_graph=True)
+            wandb.watch(self.model, log="all", log_freq=10, log_graph=True)
 
         # store learning rate as state, so it can be modified by LR decay
         self.learning_rate = self.hp.lr
@@ -209,14 +209,15 @@ class Trainer():
             loss.backward()
             
             # # Clip gradients
-            # nn.utils.clip_grad_norm_(self.encoder.parameters(), self.hp.grad_clip)
+            # nn.utils.clip_grad_norm_(self.model.parameters(), self.hp.grad_clip)
             
             # Optimize
             self.optimizer.step()
         return loss.item(), data.shape[0]
 
     def validate_one_epoch(self, epoch):
-        total_items, total_loss, total_kl_loss, total_reconstruction_loss = 0, 0, 0, 0
+        self.model.eval()
+        total_items, total_loss = 0, 0
         with torch.no_grad():    
             for batch in iter(self.valid_loader):
                 loss, batch_items = self.step(batch, is_training=False)
@@ -244,8 +245,7 @@ class Trainer():
         if self.hp.use_lr_decay:
             if self.learning_rate > self.hp.min_lr:
                 self.learning_rate *= self.hp.lr_decay
-            self.encoder_optimizer = self.update_lr(self.encoder_optimizer, self.learning_rate)
-            self.decoder_optimizer = self.update_lr(self.decoder_optimizer, self.learning_rate)
+            self.optimizer = self.update_lr(self.optimizer, self.learning_rate)
 
     def update_lr(self, optimizer, lr):
         """Decay learning rate by a factor of lr_decay"""
