@@ -75,7 +75,7 @@ class Trainer():
         # Initialize step count, to be updated in the training loop
         self.total_steps = 0
         
-        self.model = Model(hp=self.hp)
+        self.model = Model(hp=self.hp).to(self.device)
         self.loss = ReconstructionLoss()
 
         if self.use_wandb:

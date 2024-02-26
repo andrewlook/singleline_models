@@ -120,7 +120,7 @@ class Model(nn.Module):
 
 class ReconstructionLoss(nn.Module):
    
-    def forward(pred, real):
+    def forward(self, pred, real):
         pred_locations = pred[:, :, :2]
         # pred_metadata = pred[:, :, 2:]
         tgt_locations = real[:, :, :2]
