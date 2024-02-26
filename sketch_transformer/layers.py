@@ -21,8 +21,8 @@ class EncoderLayer(nn.Module):
             nn.Linear(d_ff, enc_hidden_size),
             nn.Dropout(dropout_prob),
         )
-        self.ln1 = nn.LayerNorm([max_seq_len, enc_hidden_size]) # -1 instead of batch size?
-        self.ln2 = nn.LayerNorm([max_seq_len, enc_hidden_size])
+        self.ln1 = nn.LayerNorm([enc_hidden_size]) # -1 instead of batch size?
+        self.ln2 = nn.LayerNorm([enc_hidden_size])
         # self.ln1 = nn.LayerNorm([hp.max_seq_length+2, enc_hidden_size]) # -1 instead of batch size?
         # self.ln2 = nn.LayerNorm([hp.max_seq_length+2, enc_hidden_size])
 
@@ -58,9 +58,9 @@ class DecoderLayer(nn.Module):
             nn.Linear(d_ff, d_model),
             nn.Dropout(dropout_prob),
         )
-        self.ln1 = nn.LayerNorm([max_seq_len, d_model]) # -1 instead of batch size?
-        self.ln2 = nn.LayerNorm([max_seq_len, d_model])
-        self.ln3 = nn.LayerNorm([max_seq_len, d_model])
+        self.ln1 = nn.LayerNorm([d_model]) # -1 instead of batch size?
+        self.ln2 = nn.LayerNorm([d_model])
+        self.ln3 = nn.LayerNorm([d_model])
 
     def forward(self, x: torch.Tensor, enc_output: torch.Tensor, padding_mask, dec_target_padding_mask, look_ahead_mask):
         """
