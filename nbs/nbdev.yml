@@ -3,7 +3,7 @@ project:
 
 website:
   title: "singleline_models"
-  site-url: "https://andrewlook.github.io/singleline_models"
+  site-url: "https://singleline-models.andrewlook.com/"
   description: "ML Models for Single-Line Drawings"
   repo-branch: main
   repo-url: "https://github.com/andrewlook/singleline_models"
