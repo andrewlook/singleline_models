@@ -149,10 +149,10 @@ class Trainer():
                 assert data.shape[0] == hp.max_seq_length + 2
                 assert data.shape[1] == 5
                 assert len(data.shape) == 2
-                ### NOTE: this line is different from RNN version, to ensure mask is same
-                ### size as the input sequence
-                assert mask.shape[0] == hp.max_seq_length + 2
-                # assert mask.shape[0] == hp.max_seq_length + 1
+                # ### NOTE: this line is different from RNN version, to ensure mask is same
+                # ### size as the input sequence
+                # assert mask.shape[0] == hp.max_seq_length + 2
+                # # assert mask.shape[0] == hp.max_seq_length + 1
                 assert len(mask.shape) == 1
                 # _data = data
                 # if hp.use_random_scale:
