@@ -1,0 +1,13 @@
+website:
+  sidebar:
+    contents:
+      - index.ipynb
+      - 00_core.ipynb
+      - section: sketch_rnn
+        contents:
+          - sketch_rnn/00_dataset.ipynb
+          - sketch_rnn/01_rnnlib.ipynb
+          - sketch_rnn/02_model.ipynb
+          - sketch_rnn/03_sampler.ipynb
+          - sketch_rnn/04_trainer.ipynb
+        href: sketch_rnn/index.ipynb

@@ -1,9 +1,0 @@
-project:
-  output-dir: _docs
-
-website:
-  title: "singleline_models"
-  site-url: "https://andrewlook.github.io/singleline_models"
-  description: "ML Models for Single-Line Drawings"
-  repo-branch: main
-  repo-url: "https://github.com/andrewlook/singleline_models"
