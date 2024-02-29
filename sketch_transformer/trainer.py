@@ -13,6 +13,7 @@ from fastprogress.fastprogress import master_bar, progress_bar
 from PIL import Image
 from torch import optim
 from torch.utils.data import DataLoader
+from transformers import AdamW, get_cosine_schedule_with_warmup
 
 from .config import get_default_config
 from .dataset import StrokesDataset
@@ -81,9 +82,12 @@ class Trainer():
         if self.use_wandb:
             wandb.watch(self.model, log="all", log_freq=10, log_graph=True)
 
-        # store learning rate as state, so it can be modified by LR decay
-        self.learning_rate = self.hp.lr
-        self.optimizer = optim.Adam(self.model.parameters(), self.learning_rate)
+        self.optimizer = AdamW(self.model.parameters())
+        self.scheduler = get_cosine_schedule_with_warmup(optimizer=self.optimizer, num_warmup_steps=5000, num_training_steps=500000)
+
+        # # store learning rate as state, so it can be modified by LR decay
+        # self.learning_rate = self.hp.lr
+        # self.optimizer = optim.Adam(self.model.parameters(), self.learning_rate)
 
         # `npz` file path is `data/quickdraw/[DATASET NAME].npz`
         base_path = Path(f"data/{hp.dataset_source}")
@@ -234,24 +238,25 @@ class Trainer():
     def train_one_epoch(self, epoch, parent_progressbar=None):
         steps_per_epoch = len(self.train_loader)
         for idx, batch in enumerate(progress_bar(iter(self.train_loader), parent=parent_progressbar)):
+            self.scheduler.step()
             self.total_steps = idx + epoch * steps_per_epoch
             loss, _ = self.step(batch, is_training=True)
             self.log(dict(
                 loss=loss,
                 epoch=epoch,
-                learning_rate=self.learning_rate))
+                learning_rate=self.optimizer.param_groups[0]['lr']))
         
-        # update learning rate, if use_lr_decay is enabled
-        if self.hp.use_lr_decay:
-            if self.learning_rate > self.hp.min_lr:
-                self.learning_rate *= self.hp.lr_decay
-            self.optimizer = self.update_lr(self.optimizer, self.learning_rate)
+    #     # update learning rate, if use_lr_decay is enabled
+    #     if self.hp.use_lr_decay:
+    #         if self.learning_rate > self.hp.min_lr:
+    #             self.learning_rate *= self.hp.lr_decay
+    #         self.optimizer = self.update_lr(self.optimizer, self.learning_rate)
 
-    def update_lr(self, optimizer, lr):
-        """Decay learning rate by a factor of lr_decay"""
-        for param_group in optimizer.param_groups:
-            param_group['lr'] = lr
-        return optimizer
+    # def update_lr(self, optimizer, lr):
+    #     """Decay learning rate by a factor of lr_decay"""
+    #     for param_group in optimizer.param_groups:
+    #         param_group['lr'] = lr
+    #     return optimizer
         
     def train(self):
         mb = master_bar(range(self.hp.epochs))
