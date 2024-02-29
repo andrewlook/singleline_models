@@ -4,6 +4,7 @@
 __all__ = []
 
 # %% ../../nbs/sketch_rnn/index.ipynb 1
+from .layers import *
 from .model import *
 from .sampler import *
 from .trainer import *

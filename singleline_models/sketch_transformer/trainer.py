@@ -26,7 +26,6 @@ from ..utils import CN
 
 from .masks import create_masks
 from .model import *
-from ..utils import CN
 
 # %% ../../nbs/sketch_transformer/04_trainer.ipynb 5
 def get_default_config():
