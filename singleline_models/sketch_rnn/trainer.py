@@ -3,7 +3,7 @@
 # %% auto 0
 __all__ = ['HParams', 'Trainer']
 
-# %% ../../nbs/sketch_rnn/04_trainer.ipynb 3
+# %% ../../nbs/sketch_rnn/04_trainer.ipynb 4
 import json
 import math
 import os
@@ -24,7 +24,7 @@ from ..dataset import StrokesDataset, augment_strokes, random_scale
 from .model import DecoderRNN, EncoderRNN, KLDivLoss, ReconstructionLoss
 from .sampler import Sampler
 
-# %% ../../nbs/sketch_rnn/04_trainer.ipynb 4
+# %% ../../nbs/sketch_rnn/04_trainer.ipynb 5
 class HParams():
     architecture = 'Pytorch-SketchRNN'
 
@@ -90,7 +90,7 @@ class HParams():
         return {k: getattr(self, k) for k in self.__dir__() if not k.startswith('__')}
 
 
-# %% ../../nbs/sketch_rnn/04_trainer.ipynb 5
+# %% ../../nbs/sketch_rnn/04_trainer.ipynb 6
 class Trainer():
     # Device configurations to pick the device to run the experiment
     device: str

@@ -3,14 +3,14 @@
 # %% auto 0
 __all__ = ['StrokesDataset', 'random_scale', 'augment_strokes']
 
-# %% ../nbs/00_dataset.ipynb 3
+# %% ../nbs/00_dataset.ipynb 4
 from typing import Optional
 
 import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-# %% ../nbs/00_dataset.ipynb 4
+# %% ../nbs/00_dataset.ipynb 5
 class StrokesDataset(Dataset):
     """
     ## Dataset
@@ -95,7 +95,7 @@ class StrokesDataset(Dataset):
         return self.data[idx], self.mask[idx]
 
 
-# %% ../nbs/00_dataset.ipynb 5
+# %% ../nbs/00_dataset.ipynb 6
 def random_scale(data, random_scale_factor=0.15):
     """Augment data by stretching x and y axis randomly [1-e, 1+e]."""
     x_scale_factor = (
@@ -107,7 +107,7 @@ def random_scale(data, random_scale_factor=0.15):
     result[:, 1] *= y_scale_factor
     return result
 
-# %% ../nbs/00_dataset.ipynb 6
+# %% ../nbs/00_dataset.ipynb 7
 def augment_strokes(strokes, prob=0.0):
     """Perform data augmentation by randomly dropping out strokes."""
     # drop each point within a line segments with a probability of prob

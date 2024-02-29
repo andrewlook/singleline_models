@@ -3,7 +3,7 @@
 # %% auto 0
 __all__ = ['CN', 'set_seed', 'CfgNode']
 
-# %% ../nbs/01_utils.ipynb 3
+# %% ../nbs/01_utils.ipynb 4
 import os
 import sys
 import json
@@ -13,14 +13,14 @@ from ast import literal_eval
 import numpy as np
 import torch
 
-# %% ../nbs/01_utils.ipynb 4
+# %% ../nbs/01_utils.ipynb 5
 def set_seed(seed):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
 
-# %% ../nbs/01_utils.ipynb 5
+# %% ../nbs/01_utils.ipynb 6
 class CfgNode:
     """ a lightweight configuration class inspired by yacs """
     # TODO: convert to subclass from a dict like in yacs?

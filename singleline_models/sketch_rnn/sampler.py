@@ -3,7 +3,7 @@
 # %% auto 0
 __all__ = ['Sampler']
 
-# %% ../../nbs/sketch_rnn/03_sampler.ipynb 3
+# %% ../../nbs/sketch_rnn/03_sampler.ipynb 4
 import io
 
 import numpy as np
@@ -13,7 +13,7 @@ from PIL import Image
 
 from .model import BivariateGaussianMixture, DecoderRNN, EncoderRNN
 
-# %% ../../nbs/sketch_rnn/03_sampler.ipynb 4
+# %% ../../nbs/sketch_rnn/03_sampler.ipynb 5
 class Sampler:
     """
     This samples a sketch from the decoder and plots it

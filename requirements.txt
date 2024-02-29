@@ -2,7 +2,8 @@ torch
 numpy
 matplotlib
 Pillow
-eionops
+einops
+fastcore
 fastprogress
 wandb
 onnx
