@@ -13,7 +13,7 @@ from fastprogress.fastprogress import master_bar, progress_bar
 from PIL import Image
 from torch import optim
 from torch.utils.data import DataLoader
-from transformers import AdamW, get_cosine_schedule_with_warmup
+from transformers import get_cosine_schedule_with_warmup
 
 from .config import get_default_config
 from .dataset import StrokesDataset
@@ -82,8 +82,8 @@ class Trainer():
         if self.use_wandb:
             wandb.watch(self.model, log="all", log_freq=10, log_graph=True)
 
-        self.optimizer = AdamW(self.model.parameters())
-        self.scheduler = get_cosine_schedule_with_warmup(optimizer=self.optimizer, num_warmup_steps=5000, num_training_steps=500000)
+        self.optimizer = optim.AdamW(self.model.parameters(), lr=3e-4)
+        self.scheduler = get_cosine_schedule_with_warmup(optimizer=self.optimizer, num_warmup_steps=1000, num_training_steps=50000)
 
         # # store learning rate as state, so it can be modified by LR decay
         # self.learning_rate = self.hp.lr
