@@ -57,7 +57,7 @@ class HParams():
     random_scale_factor = 0.15
 
     # lstm_impl = "builtin"
-    lstm_impl = "custom"
+    lstm_impl = "rnnlib"
     
     # Encoder and decoder sizes
     enc_hidden_size = 256

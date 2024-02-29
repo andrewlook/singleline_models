@@ -126,7 +126,7 @@ class DecoderRNN(nn.Module):
             
             if self.lstm_impl=="builtin":
                 state = (h.unsqueeze(0).contiguous(), c.unsqueeze(0).contiguous())
-            elif self.lstm_impl=="custom":
+            elif self.lstm_impl=="rnnlib":
                 state = (h, c)
             else:
                 raise NotImplementedError()
