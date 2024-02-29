@@ -11,7 +11,7 @@ import einops
 import torch
 import torch.nn as nn
 
-from ..lstm.shim import lstm_layer
+from ..lstm.all import lstm_layer, LSTM_BUILTIN, LSTM_RNNLIB
 
 # %% ../../nbs/sketch_rnn/02_model.ipynb 5
 class EncoderRNN(nn.Module):
@@ -124,9 +124,9 @@ class DecoderRNN(nn.Module):
             # `h` and `c` have shapes `[batch_size, lstm_size]`. We want to shape them
             # to `[1, batch_size, lstm_size]` because that's the shape used in LSTM.
             
-            if self.lstm_impl=="builtin":
+            if self.lstm_impl==LSTM_BUILTIN:
                 state = (h.unsqueeze(0).contiguous(), c.unsqueeze(0).contiguous())
-            elif self.lstm_impl=="rnnlib":
+            elif self.lstm_impl==LSTM_RNNLIB:
                 state = (h, c)
             else:
                 raise NotImplementedError()

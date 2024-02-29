@@ -21,6 +21,7 @@ from torch import optim
 from torch.utils.data import DataLoader
 
 from ..dataset import StrokesDataset, augment_strokes, random_scale
+from ..lstm.all import LSTM_BUILTIN, LSTM_RNNLIB
 from .model import DecoderRNN, EncoderRNN, KLDivLoss, ReconstructionLoss
 from .sampler import Sampler
 
@@ -56,8 +57,8 @@ class HParams():
     use_random_scale = True
     random_scale_factor = 0.15
 
-    # lstm_impl = "builtin"
-    lstm_impl = "rnnlib"
+    # lstm_impl = LSTM_BUILTIN
+    lstm_impl = LSTM_RNNLIB
     
     # Encoder and decoder sizes
     enc_hidden_size = 256
