@@ -20,7 +20,7 @@ from PIL import Image
 from torch import optim
 from torch.utils.data import DataLoader
 
-from .dataset import StrokesDataset, augment_strokes, random_scale
+from ..dataset import StrokesDataset, augment_strokes, random_scale
 from .model import DecoderRNN, EncoderRNN, KLDivLoss, ReconstructionLoss
 from .sampler import Sampler
 
