@@ -21,7 +21,7 @@ from torch import optim
 from torch.utils.data import DataLoader
 from transformers import get_cosine_schedule_with_warmup
 
-from ..dataset import StrokesDataset
+from ..dataset import StrokesDataset, create_dataloaders
 from ..utils import CN
 
 from .masks import create_masks
@@ -49,8 +49,16 @@ def get_default_config():
     C.blind_decoder_mask = True # if True, the decoder knows padding location of the input
 
     # TODO: just make this a path?
-    C.dataset_source = 'look'
-    C.dataset_name = 'epoch20240221_expanded10x_trainval'
+    C.dataset_source: str = 'look'
+    C.dataset_name: str = 'epoch20240221_expanded10x_trainval'
+    C.dataset_fname: str = 'data/look/epoch20240221_expanded10x_trainval.npz'
+    # C.dataset_source: str = 'look'
+    # C.dataset_name: str = 'look_i16__minn10_epsilon1'
+    # C.dataset_fname: str = 'data/look/look_i16__minn10_epsilon1.npz'
+    # data augmentation
+    C.augment_stroke_prob = 0.1
+    C.use_random_scale = True
+    C.random_scale_factor = 0.15
 
     C.epochs = 50000
     C.lr = 1e-3
@@ -99,17 +107,16 @@ class Trainer():
             )
             # use wandb's run ID, if available, so checkpoints match W&B's dashboard ID
             self.run_id = run.id
+        self.models_dir = Path(models_dir)
+        self.run_dir = self.models_dir / self.run_id
+        if not os.path.isdir(self.run_dir):
+            os.makedirs(self.run_dir)
 
         print('='*60)
         print(f"RUN_ID: {self.run_id}\n")
         print(f"HYPERPARAMETERS:\n")
         print(json.dumps(hp.__dict__, indent=2))
         print('='*60 + '\n\n')
-
-        self.models_dir = Path(models_dir)
-        self.run_dir = self.models_dir / self.run_id
-        if not os.path.isdir(self.run_dir):
-            os.makedirs(self.run_dir)
 
         # Initialize step count, to be updated in the training loop
         self.total_steps = 0
@@ -127,47 +134,7 @@ class Trainer():
         # self.learning_rate = self.hp.lr
         # self.optimizer = optim.Adam(self.model.parameters(), self.learning_rate)
 
-        # `npz` file path is `data/quickdraw/[DATASET NAME].npz`
-        base_path = Path(f"data/{hp.dataset_source}")
-        path = base_path / f'{hp.dataset_name}.npz'
-        # Load the numpy file
-        dataset = np.load(str(path), encoding='latin1', allow_pickle=True)
-
-        # Create training dataset
-        self.train_dataset = StrokesDataset(dataset['train'], hp.max_seq_length)
-        # Create validation dataset
-        self.valid_dataset = StrokesDataset(dataset['valid'], hp.max_seq_length, self.train_dataset.scale)
-
-        def collate_fn(batch, **kwargs):
-            assert type(batch) == list
-            # assert len(batch) == hp.batch_size
-
-            all_data = []
-            all_mask = []
-            for data, mask in batch:
-                assert data.shape[0] == hp.max_seq_length + 2
-                assert data.shape[1] == 5
-                assert len(data.shape) == 2
-                # ### NOTE: this line is different from RNN version, to ensure mask is same
-                # ### size as the input sequence
-                # assert mask.shape[0] == hp.max_seq_length + 2
-                # # assert mask.shape[0] == hp.max_seq_length + 1
-                assert len(mask.shape) == 1
-                # _data = data
-                # if hp.use_random_scale:
-                #     _data = random_scale(data, hp.random_scale_factor)
-                # if hp.augment_stroke_prob > 0:
-                #     _data = augment_strokes(_data, hp.augment_stroke_prob)
-                all_data.append(data)
-                all_mask.append(mask)
-            # print(f"collate - batch: {len(batch)}, {batch[0][0].shape}, {batch[0][1].shape}")
-            # print(f"collate - kwargs: {kwargs}")
-            return torch.stack(all_data), torch.stack(all_mask)
-
-        # Create training data loader
-        self.train_loader = DataLoader(self.train_dataset, hp.batch_size, shuffle=True, collate_fn=collate_fn)
-        # Create validation data loader
-        self.valid_loader = DataLoader(self.valid_dataset, hp.batch_size)
+        self.train_dataset, self.train_loader, self.valid_dataset, self.valid_loader = create_dataloaders(hp)
 
         # # Create sampler
         # self.sampler = Sampler(self.encoder, self.decoder)

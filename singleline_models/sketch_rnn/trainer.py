@@ -20,13 +20,13 @@ from PIL import Image
 from torch import optim
 from torch.utils.data import DataLoader
 
-from ..dataset import StrokesDataset, augment_strokes, random_scale
+from ..dataset import StrokesDataset, create_dataloaders
 from .sampler import Sampler
 
 # %% ../../nbs/sketch_rnn/04_trainer.ipynb 5
 from ..utils import CN
 from ..lstm.all import LSTM_BUILTIN, LSTM_RNNLIB
-from .layers import DecoderRNN, EncoderRNN, KLDivLoss, ReconstructionLoss
+from .layers import BivariateGaussianMixture, DecoderRNN, EncoderRNN, KLDivLoss, ReconstructionLoss
 
 # %% ../../nbs/sketch_rnn/04_trainer.ipynb 6
 class SketchRNNModel(nn.Module):
@@ -62,6 +62,16 @@ class SketchRNNModel(nn.Module):
 
         C.dataset_source: str = 'look'
         C.dataset_name: str = 'look_i16__minn10_epsilon1'
+        C.dataset_fname: str = 'data/look/look_i16__minn10_epsilon1.npz'
+
+        # C.dataset_source = 'look'
+        # C.dataset_name = 'epoch20240221_expanded10x_trainval'
+        # C.dataset_fname = 'data/look/epoch20240221_expanded10x_trainval.npz'
+        
+        # data augmentation
+        C.augment_stroke_prob = 0.1
+        C.use_random_scale = True
+        C.random_scale_factor = 0.15
 
         # duration of training run
         C.epochs = 50000
@@ -82,11 +92,6 @@ class SketchRNNModel(nn.Module):
         # layer normalization
         C.use_layer_norm = True
         C.layer_norm_learnable = False
-
-        # data augmentation
-        C.augment_stroke_prob = 0.1
-        C.use_random_scale = True
-        C.random_scale_factor = 0.15
 
         # lstm_impl = LSTM_BUILTIN
         C.lstm_impl = LSTM_RNNLIB
@@ -118,6 +123,67 @@ class SketchRNNModel(nn.Module):
         # Filter out stroke sequences longer than $200$
         C.max_seq_length = 200
         return C
+
+    def sample(self, data: torch.Tensor, temperature: float):
+        # $N_{max}$
+        longest_seq_len = len(data)
+
+        # Get $z$ from the encoder
+        z, _, _ = self.encoder(data)
+
+        # Start-of-sequence stroke is $(0, 0, 1, 0, 0)$
+        s = data.new_tensor([0, 0, 1, 0, 0])
+        seq = [s]
+        # Initial decoder is `None`.
+        # The decoder will initialize it to $[h_0; c_0] = \tanh(W_{z}z + b_z)$
+        state = None
+
+        # We don't need gradients
+        with torch.no_grad():
+            # Sample $N_{max}$ strokes
+            for i in range(longest_seq_len):
+                # $[(\Delta x, \Delta y, p_1, p_2, p_3); z]$ is the input to the decoder
+                data = torch.cat([s.view(1, 1, -1), z.unsqueeze(0)], 2)
+                # Get $\Pi$, $\mathcal{N}(\mu_{x}, \mu_{y}, \sigma_{x}, \sigma_{y}, \rho_{xy})$,
+                # $q$ and the next state from the decoder
+                dist, q_logits, state = self.decoder(data, z, state)
+                # Sample a stroke
+                s = self._sample_step(dist, q_logits, temperature)
+                # Add the new stroke to the sequence of strokes
+                seq.append(s)
+                # Stop sampling if $p_3 = 1$. This indicates that sketching has stopped
+                if s[4] == 1:
+                    break
+
+        # Create a PyTorch tensor of the sequence of strokes
+        seq = torch.stack(seq)
+        return seq
+
+    @staticmethod
+    def _sample_step(dist: BivariateGaussianMixture, q_logits: torch.Tensor, temperature: float):
+        # Set temperature $\tau$ for sampling. This is implemented in class `BivariateGaussianMixture`.
+        dist.set_temperature(temperature)
+        # Get temperature adjusted $\Pi$ and $\mathcal{N}(\mu_{x}, \mu_{y}, \sigma_{x}, \sigma_{y}, \rho_{xy})$
+        pi, mix = dist.get_distribution()
+        # Sample from $\Pi$ the index of the distribution to use from the mixture
+        idx = pi.sample()[0, 0]
+
+        # Create categorical distribution $q$ with log-probabilities `q_logits` or $\hat{q}$
+        q = torch.distributions.Categorical(logits=q_logits / temperature)
+        # Sample from $q$
+        q_idx = q.sample()[0, 0]
+
+        # Sample from the normal distributions in the mixture and pick the one indexed by `idx`
+        xy = mix.sample()[0, 0, idx]
+
+        # Create an empty stroke $(\Delta x, \Delta y, q_1, q_2, q_3)$
+        stroke = q_logits.new_zeros(5)
+        # Set $\Delta x, \Delta y$
+        stroke[:2] = xy
+        # Set $q_1, q_2, q_3$
+        stroke[q_idx + 2] = 1
+        #
+        return stroke
 
 # %% ../../nbs/sketch_rnn/04_trainer.ipynb 7
 class Trainer():
@@ -194,52 +260,8 @@ class Trainer():
 
         self.eta_step = self.hp.eta_min if self.hp.use_eta else 1
 
-        # `npz` file path is `data/quickdraw/[DATASET NAME].npz`
-        base_path = Path(f"data/{self.hp.dataset_source}")
-        path = base_path / f'{self.hp.dataset_name}.npz'
-        # Load the numpy file
-        dataset = np.load(str(path), encoding='latin1', allow_pickle=True)
-
-        # Create training dataset
-        self.train_dataset = StrokesDataset(dataset['train'], self.hp.max_seq_length)
-        # Create validation dataset
-        self.valid_dataset = StrokesDataset(dataset['valid'], self.hp.max_seq_length, self.train_dataset.scale)
-
-        def collate_fn(batch, **kwargs):
-            assert type(batch) == list
-            # assert len(batch) == self.hp.batch_size
-
-            all_data = []
-            all_mask = []
-            for data, mask in batch:
-                assert data.shape[0] == self.hp.max_seq_length + 2
-                assert data.shape[1] == 5
-                assert len(data.shape) == 2
-                assert mask.shape[0] == self.hp.max_seq_length + 1
-                assert len(mask.shape) == 1
-
-                _data = data
-                if self.hp.use_random_scale:
-                    _data = random_scale(data, self.hp.random_scale_factor)
-
-                if self.hp.augment_stroke_prob > 0:
-                    _data = augment_strokes(_data, self.hp.augment_stroke_prob)
-
-                all_data.append(data)
-                all_mask.append(mask)
-
-
-            # print(f"collate - batch: {len(batch)}, {batch[0][0].shape}, {batch[0][1].shape}")
-            # print(f"collate - kwargs: {kwargs}")
-            return torch.stack(all_data), torch.stack(all_mask)
-
-        # Create training data loader
-        self.train_loader = DataLoader(self.train_dataset, self.hp.batch_size, shuffle=True, collate_fn=collate_fn)
-        # Create validation data loader
-        self.valid_loader = DataLoader(self.valid_dataset, self.hp.batch_size)
-
-        # Create sampler
-        self.sampler = Sampler(self.encoder, self.decoder)
+        self.train_dataset, self.train_loader, self.valid_dataset, self.valid_loader = create_dataloaders(hp)
+        
         # Pick 5 indices from the validation dataset, so the sampling can be compared across epochs
         self.valid_idxs = [np.random.choice(len(self.valid_dataset)) for _ in range(5)]
 
@@ -274,12 +296,13 @@ class Trainer():
 
             # Randomly pick a sample from validation dataset to encoder
             data, *_ = self.valid_dataset[idx]
-            self.sampler.plot(data, orig_path)
+            Sampler.plot(data, orig_path)
 
             # Add batch dimension and move it to device
             data_batched = data.unsqueeze(1).to(self.device)
             # Sample
-            self.sampler.sample(data_batched, self.hp.temperature, decoded_path)
+            sampled_seq = self.model.sample(data_batched, self.hp.temperature)
+            Sampler.plot(sampled_seq, decoded_path)
 
             if display:
                 Image.open(orig_path).show()
