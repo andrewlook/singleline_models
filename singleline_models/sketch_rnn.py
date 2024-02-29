@@ -4,8 +4,6 @@
 __all__ = []
 
 # %% ../nbs/sketch_rnn/index.ipynb 1
-from .sketch_rnn.dataset import *
-from .sketch_rnn.rnnlib import *
 from .sketch_rnn.model import *
 from .sketch_rnn.sampler import *
 from .sketch_rnn.trainer import *

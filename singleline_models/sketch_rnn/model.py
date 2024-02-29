@@ -11,9 +11,9 @@ import einops
 import torch
 import torch.nn as nn
 
-from ..lstm import lstm_layer
+from ..lstm.shim import lstm_layer
 
-# %% ../../nbs/sketch_rnn/02_model.ipynb 6
+# %% ../../nbs/sketch_rnn/02_model.ipynb 5
 class EncoderRNN(nn.Module):
     """
     ## Encoder module
@@ -75,7 +75,7 @@ class EncoderRNN(nn.Module):
 
 
 
-# %% ../../nbs/sketch_rnn/02_model.ipynb 7
+# %% ../../nbs/sketch_rnn/02_model.ipynb 6
 class DecoderRNN(nn.Module):
 
     def __init__(self,
@@ -159,7 +159,7 @@ class DecoderRNN(nn.Module):
         return dist, q_logits, state
 
 
-# %% ../../nbs/sketch_rnn/02_model.ipynb 8
+# %% ../../nbs/sketch_rnn/02_model.ipynb 7
 class BivariateGaussianMixture:
     """
     ## Bi-variate Gaussian mixture
@@ -227,7 +227,7 @@ class BivariateGaussianMixture:
         #
         return cat_dist, multi_dist
 
-# %% ../../nbs/sketch_rnn/02_model.ipynb 9
+# %% ../../nbs/sketch_rnn/02_model.ipynb 8
 class ReconstructionLoss(nn.Module):
     """
     ## Reconstruction Loss
@@ -268,7 +268,7 @@ class ReconstructionLoss(nn.Module):
         return loss_stroke + loss_pen
 
 
-# %% ../../nbs/sketch_rnn/02_model.ipynb 10
+# %% ../../nbs/sketch_rnn/02_model.ipynb 9
 class KLDivLoss(nn.Module):
     """
     This calculates the KL divergence between a given normal distribution and $\mathcal{N}(0, 1)$
