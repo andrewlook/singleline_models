@@ -1,6 +1,6 @@
 import torch
 
-from singleline_models.sketch_rnn import HParams, Trainer
+from singleline_models.sketch_rnn.trainer import HParams, Trainer
 
 if __name__ == "__main__":
     hp = HParams()
