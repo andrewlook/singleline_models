@@ -139,7 +139,7 @@ def augment_strokes(strokes, prob=0.0):
 
 # %% ../nbs/00_dataset.ipynb 8
 def create_dataloaders(hp: CN):
-    path = hp.dataset_fname
+    path = Path(hp.dataset_fname)
     if not hp.dataset_fname:
         # `npz` file path is `data/quickdraw/[DATASET NAME].npz`
         base_path = Path(f"data/{hp.dataset_source}")
@@ -159,6 +159,7 @@ def create_dataloaders(hp: CN):
         all_data = []
         all_mask = []
         for data, mask in batch:
+            # print(f"data.shape[0]={data.shape[0]}")
             assert data.shape[0] == hp.max_seq_length + 2
             assert data.shape[1] == 5
             assert len(data.shape) == 2

@@ -49,12 +49,12 @@ def get_default_config():
     C.blind_decoder_mask = True # if True, the decoder knows padding location of the input
 
     # TODO: just make this a path?
-    C.dataset_source: str = 'look'
-    C.dataset_name: str = 'epoch20240221_expanded10x_trainval'
-    C.dataset_fname: str = 'data/look/epoch20240221_expanded10x_trainval.npz'
     # C.dataset_source: str = 'look'
-    # C.dataset_name: str = 'look_i16__minn10_epsilon1'
-    # C.dataset_fname: str = 'data/look/look_i16__minn10_epsilon1.npz'
+    # C.dataset_name: str = 'epoch20240221_expanded10x_trainval'
+    # C.dataset_fname: str = 'data/look/epoch20240221_expanded10x_trainval.npz'
+    C.dataset_source: str = 'look'
+    C.dataset_name: str = 'look_i16__minn10_epsilon1'
+    C.dataset_fname: str = 'data/look/look_i16__minn10_epsilon1.npz'
     # data augmentation
     C.augment_stroke_prob = 0.1
     C.use_random_scale = True
