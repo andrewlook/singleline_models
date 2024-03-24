@@ -117,8 +117,10 @@ class PositionalEncoding(nn.Module):
         Arguments:
             x: Tensor, shape ``[batch, seq_len, embedding_dim]``
         """
-        x_pe = self.pe[:, :x.size(1)]
-        # print(f"x.shape: {x.shape}, x_pe.shape: {x_pe.shape}")
+        # chop stored positional encoding down:
+        # - in dimension 0, because during validation there may be a final batch with size < batch_size
+        # - in dimension 1, because during decoding/etc there may be smaller sequences passed in
+        x_pe = self.pe[:x.size(0), :x.size(1)]
         x = x + x_pe
         return self.dropout(x)
 
