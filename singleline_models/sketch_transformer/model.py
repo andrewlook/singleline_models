@@ -131,7 +131,6 @@ class Model(nn.Module):
         return lowerdim_output, enc_output
     
     def decode(self, embedding, target, dec_padding_mask, dec_target_padding_mask, look_ahead_mask):
-        """Generate logits"""
         padding_mask = torch.zeros_like(dec_padding_mask).bool() if self.hp.blind_decoder_mask else dec_padding_mask
         pre_decoder = self.expand_layer(embedding)
         

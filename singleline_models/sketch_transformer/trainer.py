@@ -46,7 +46,8 @@ def get_default_config():
     C.max_seq_length = 250
     C.batch_size = 100
 
-    C.blind_decoder_mask = True # if True, the decoder knows padding location of the input
+    # if True, the decoder knows padding location of the input
+    C.blind_decoder_mask = True
 
     # TODO: just make this a path?
     # C.dataset_source: str = 'look'
@@ -111,7 +112,6 @@ class Trainer():
         self.run_dir = self.models_dir / self.run_id
         if not os.path.isdir(self.run_dir):
             os.makedirs(self.run_dir)
-        print(f"using run_dir: {self.run_dir}")
         
         print('='*60)
         print(f"RUN_ID: {self.run_id}\n")
@@ -140,7 +140,6 @@ class Trainer():
 
     def save(self):
         model_path = Path(self.run_dir) / f'runid-{self.run_id}.pth'
-        print(f"saving to: {model_path}")
         torch.save(self.model.state_dict(), model_path)
         with open(Path(self.run_dir) / f'runid-{self.run_id}.json', 'w') as outfile:
             json.dump(self.hp.__dict__, outfile, indent=2)
