@@ -111,7 +111,8 @@ class Trainer():
         self.run_dir = self.models_dir / self.run_id
         if not os.path.isdir(self.run_dir):
             os.makedirs(self.run_dir)
-
+        print(f"using run_dir: {self.run_dir}")
+        
         print('='*60)
         print(f"RUN_ID: {self.run_id}\n")
         print(f"HYPERPARAMETERS:\n")
@@ -138,8 +139,9 @@ class Trainer():
         # self.valid_idxs = [np.random.choice(len(self.valid_dataset)) for _ in range(5)]
 
     def save(self):
-        torch.save(self.model.state_dict(), \
-            Path(self.run_dir) / f'runid-{self.run_id}.pth')
+        model_path = Path(self.run_dir) / f'runid-{self.run_id}.pth'
+        print(f"saving to: {model_path}")
+        torch.save(self.model.state_dict(), model_path)
         with open(Path(self.run_dir) / f'runid-{self.run_id}.json', 'w') as outfile:
             json.dump(self.hp.__dict__, outfile, indent=2)
 
@@ -184,7 +186,7 @@ class Trainer():
     #             Image.open(decoded_path).show()
     #         orig_paths.append(orig_path)
     #         decoded_paths.append(decoded_path)
-    #     return sorted(orig_paths), sorted(decoded_paths)   
+    #     return sorted(orig_paths), sorted(decoded_paths)
 
     def step(self, batch: Any, is_training=False):
         self.model.train(is_training)
@@ -198,6 +200,7 @@ class Trainer():
         enc_padding_mask, dec_padding_mask, dec_target_padding_mask, look_ahead_mask = create_masks(inp, tar_inp, device=self.device)
 
         recon, _ = self.model(inp, tar_inp, enc_padding_mask, dec_padding_mask, dec_target_padding_mask, look_ahead_mask)
+
         loss, loss_extras = self.loss(recon, tar_real)
 
         # Only if we are in training state
@@ -218,7 +221,7 @@ class Trainer():
     def validate_one_epoch(self, epoch):
         self.model.eval()
         total_items, total_loss = 0, 0
-        with torch.no_grad():    
+        with torch.no_grad(): 
             for batch in iter(self.valid_loader):
                 batch_items, loss, _ = self.step(batch, is_training=False)
 
@@ -253,7 +256,6 @@ class Trainer():
             if val_avg_loss < self.best_val_loss:
                 self.best_val_loss = val_avg_loss
                 update_best_val = True
-                #if epoch % self.hp.save_every_n_epochs == 0:
                 self.save()
                 # self.sample()
             mb.write(f"Finished epoch {epoch}. Validation Loss: {val_avg_loss}{' (new best)' if update_best_val else ''}")

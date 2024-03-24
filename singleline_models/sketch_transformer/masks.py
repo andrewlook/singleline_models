@@ -6,23 +6,32 @@ __all__ = ['create_padding_mask', 'create_lookahead_mask', 'create_masks', 'make
 # %% ../../nbs/sketch_transformer/01_masks.ipynb 4
 import torch
 
-# %% ../../nbs/sketch_transformer/01_masks.ipynb 5
+# %% ../../nbs/sketch_transformer/01_masks.ipynb 6
 def create_padding_mask(seq):
-  """
-  In seq, the 5th entry in the last dimension is the padding column, which will
-  be 1 if the row is padding.
+    """
+    In seq, the 5th entry in the last dimension is the padding column, which will
+    be 1 if the row is padding.
+    
+    Convert to a boolean tensor, indicating 'True' for entries that are padding and should be ignored.
 
-  In this case, we're just inverting that field to get a padding mask. Note:
-  this will not work for tokenizer-based sequences.
-
-  :param seq: (batch_size, seq_len, 5)
-  :return: (batch_size, seq_len)
-  """
-  return torch.abs(seq[..., -1]-1)
+    :param seq: (batch_size, seq_len, 5)
+    :return: (batch_size, seq_len)
+    """
+    return seq[..., -1].bool()
 
 
 def create_lookahead_mask(seq_len):
-  return torch.triu(torch.ones(seq_len, seq_len), diagonal=1)
+    """
+    Create an attention mask, with rows representing target position and columns representing source position.
+
+    For row=i, column=j, mask[i][j] is 'True' if the decoder must ignore position j when processing position i.
+
+    An upper diagonal matrix (without the diagonal) will have 'True' for any j > i.
+    
+    :param seq_len: sequence length
+    :return: (seq_len, seq_len)
+    """
+    return torch.triu(torch.ones(seq_len, seq_len), diagonal=1).bool()
 
 
 def create_masks(input_seq, target_seq, device='cuda'):
