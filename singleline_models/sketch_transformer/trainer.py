@@ -130,10 +130,6 @@ class Trainer():
         self.optimizer = optim.AdamW(self.model.parameters(), lr=3e-4)
         self.scheduler = get_cosine_schedule_with_warmup(optimizer=self.optimizer, num_warmup_steps=1000, num_training_steps=50000)
 
-        # # store learning rate as state, so it can be modified by LR decay
-        # self.learning_rate = self.hp.lr
-        # self.optimizer = optim.Adam(self.model.parameters(), self.learning_rate)
-
         self.train_dataset, self.train_loader, self.valid_dataset, self.valid_loader = create_dataloaders(hp)
 
         # # Create sampler
@@ -166,9 +162,6 @@ class Trainer():
     def log(self, metrics):
         if self.use_wandb:
             wandb.log(metrics, step=self.total_steps)
-        else:
-            pass
-            #pprint({'step': self.total_steps, **metrics})
 
     # def sample(self, epoch, display=False):
     #     orig_paths = []
@@ -198,25 +191,13 @@ class Trainer():
 
         data = batch[0].to(self.device)
         
-        # # hack: add 1 dimension
-        # inp = torch.cat([data, data[:, -1, :].unsqueeze(1)], dim=1)
         inp = data
         tar_inp = inp[:, :-1, ...]
         tar_real = inp[:, 1:, ...]
 
-        # print(f"inp.shape = {inp.shape}")
-        # print(f"tar_inp.shape = {tar_inp.shape}")
-        # print(f"tar_real.shape = {tar_real.shape}")
-
         enc_padding_mask, dec_padding_mask, dec_target_padding_mask, look_ahead_mask = create_masks(inp, tar_inp, device=self.device)
-        
-        # print(f"enc_padding_mask.shape = {enc_padding_mask.shape}")
-        # print(f"dec_padding_mask.shape = {dec_padding_mask.shape}")
-        # print(f"dec_target_padding_mask.shape = {dec_target_padding_mask.shape}")
-        # print(f"look_ahead_mask.shape = {look_ahead_mask.shape}")
 
         recon, _ = self.model(inp, tar_inp, enc_padding_mask, dec_padding_mask, dec_target_padding_mask, look_ahead_mask)
-
         loss = self.loss(recon, tar_real)
 
         # Only if we are in training state

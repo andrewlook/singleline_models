@@ -61,13 +61,6 @@ class Decoder(nn.Module):
         # add positional embedding, and apply dropout
         x = self.pos_encoding(x)
 
-        # print(f"\t\tDecoder.forward: x={x.shape}")
-        # print(f"\t\tDecoder.forward: enc_output={enc_output.shape}")
-
-        # print(f"\t\tDecoder.forward: padding_mask={padding_mask.shape}")
-        # print(f"\t\tDecoder.forward: dec_target_padding_mask={dec_target_padding_mask.shape}")
-        # print(f"\t\tDecoder.forward: look_ahead_mask={look_ahead_mask.shape}")
-
         attention_weights = {}
         for i, layer in enumerate(self.dec_layers):
             x, block1, block2 = layer(x, enc_output, padding_mask, dec_target_padding_mask, look_ahead_mask)
@@ -135,15 +128,6 @@ class Model(nn.Module):
         """Generate logits"""
         padding_mask = torch.zeros_like(dec_padding_mask) if self.hp.blind_decoder_mask else dec_padding_mask
         pre_decoder = self.expand_layer(embedding)
-
-        # print(f"\tModel.decode: embedding={embedding.shape}")
-        # print(f"\tModel.decode: pre_decoder={pre_decoder.shape}")
-
-        # print(f"\tModel.decode: target={target.shape}")
-        
-        # print(f"\tModel.decode: dec_padding_mask={padding_mask.shape}")
-        # print(f"\tModel.decode: dec_target_padding_mask={dec_target_padding_mask.shape}")
-        # print(f"\tModel.decode: look_ahead_mask={look_ahead_mask.shape}")
         
         dec_output, attention_weights = self.decoder(
             x=target,
@@ -156,8 +140,6 @@ class Model(nn.Module):
 
     def forward(self, input_seq, target_seq, enc_padding_mask, dec_padding_mask, dec_target_padding_mask, look_ahead_mask):
         lowerdim_output, enc_output = self.encode(input_seq, enc_padding_mask)
-        # print(f"\tModel.forward: lowerdim_output.shape={lowerdim_output.shape}")
-        # print(f"\tModel.forward: enc_output.shape={enc_output.shape}")
         
         final_output, attention_weights = self.decode(
             embedding=lowerdim_output,
