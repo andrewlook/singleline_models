@@ -74,10 +74,22 @@ class DecoderLayer(nn.Module):
         enc_output will have shape `[batch_size, input_seq_len, d_model]`
         """
 
+        # print(f"\t\t\tDecoderLayer.forward: (MHA1 K,Q,V)     x={x.shape} ")
+        # print(f"\t\t\tDecoderLayer.forward: (MHA1 mask)      dec_target_padding_mask={dec_target_padding_mask.shape}")
+        # print(f"\t\t\tDecoderLayer.forward: (MHA1 lookahead) look_ahead_mask={look_ahead_mask.shape}")
+
         attn1, attn1_weights = self.mha1(x, x, x, key_padding_mask=dec_target_padding_mask, attn_mask=look_ahead_mask)
         out1 = self.ln1(x + attn1)
 
-        attn2, attn2_weights = self.mha2(enc_output, enc_output, out1, padding_mask)
+        # print(f"\t\t\tDecoderLayer.forward: (MHA2 K,Q)  enc_output={enc_output.shape}")
+        # print(f"\t\t\tDecoderLayer.forward: (MHA2 V)    out1={out1.shape}")
+        # print(f"\t\t\tDecoderLayer.forward: (MAH2 mask) padding_mask={padding_mask.shape}")
+
+
+        x2 = enc_output[:, :out1.shape[1], ...]
+        # print(f"\t\t\tDecoderLayer.forward: (MHA2 K,Q)  x2={x2.shape}   (CHOPPED)")
+        
+        attn2, attn2_weights = self.mha2(x2, x2, out1, dec_target_padding_mask) #padding_mask)
         out2 = self.ln2(out1 + attn2)
 
         ffn_output = self.ffn(out2)

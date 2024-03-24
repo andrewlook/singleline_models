@@ -198,14 +198,24 @@ class Trainer():
 
         data = batch[0].to(self.device)
         
-        # hack: add 1 dimension
-        inp = torch.cat([data, data[:, -1, :].unsqueeze(1)], dim=1)
+        # # hack: add 1 dimension
+        # inp = torch.cat([data, data[:, -1, :].unsqueeze(1)], dim=1)
+        inp = data
         tar_inp = inp[:, :-1, ...]
         tar_real = inp[:, 1:, ...]
 
-        enc_padding_mask, dec_padding_mask, dec_target_padding_mask, look_ahead_mask = create_masks(tar_inp, tar_inp, device=self.device)
+        # print(f"inp.shape = {inp.shape}")
+        # print(f"tar_inp.shape = {tar_inp.shape}")
+        # print(f"tar_real.shape = {tar_real.shape}")
 
-        recon, _ = self.model(tar_inp, tar_inp, enc_padding_mask, dec_padding_mask, dec_target_padding_mask, look_ahead_mask)
+        enc_padding_mask, dec_padding_mask, dec_target_padding_mask, look_ahead_mask = create_masks(inp, tar_inp, device=self.device)
+        
+        # print(f"enc_padding_mask.shape = {enc_padding_mask.shape}")
+        # print(f"dec_padding_mask.shape = {dec_padding_mask.shape}")
+        # print(f"dec_target_padding_mask.shape = {dec_target_padding_mask.shape}")
+        # print(f"look_ahead_mask.shape = {look_ahead_mask.shape}")
+
+        recon, _ = self.model(inp, tar_inp, enc_padding_mask, dec_padding_mask, dec_target_padding_mask, look_ahead_mask)
 
         loss = self.loss(recon, tar_real)
 
@@ -222,14 +232,14 @@ class Trainer():
             
             # Optimize
             self.optimizer.step()
-        return loss.item(), data.shape[0]
+        return data.shape[0], loss.item()
 
     def validate_one_epoch(self, epoch):
         self.model.eval()
         total_items, total_loss = 0, 0
         with torch.no_grad():    
             for batch in iter(self.valid_loader):
-                loss, batch_items = self.step(batch, is_training=False)
+                batch_items, loss = self.step(batch, is_training=False)
 
                 total_loss += loss * batch_items
                 total_items += batch_items
@@ -245,23 +255,11 @@ class Trainer():
         for idx, batch in enumerate(progress_bar(iter(self.train_loader), parent=parent_progressbar)):
             self.scheduler.step()
             self.total_steps = idx + epoch * steps_per_epoch
-            loss, _ = self.step(batch, is_training=True)
+            _, loss = self.step(batch, is_training=True)
             self.log(dict(
                 loss=loss,
                 epoch=epoch,
                 learning_rate=self.optimizer.param_groups[0]['lr']))
-        
-    #     # update learning rate, if use_lr_decay is enabled
-    #     if self.hp.use_lr_decay:
-    #         if self.learning_rate > self.hp.min_lr:
-    #             self.learning_rate *= self.hp.lr_decay
-    #         self.optimizer = self.update_lr(self.optimizer, self.learning_rate)
-
-    # def update_lr(self, optimizer, lr):
-    #     """Decay learning rate by a factor of lr_decay"""
-    #     for param_group in optimizer.param_groups:
-    #         param_group['lr'] = lr
-    #     return optimizer
         
     def train(self):
         mb = master_bar(range(self.hp.epochs))

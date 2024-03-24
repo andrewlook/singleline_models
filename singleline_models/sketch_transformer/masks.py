@@ -26,8 +26,6 @@ def create_lookahead_mask(seq_len):
 
 
 def create_masks(input_seq, target_seq, device='cuda'):
-
-    # Encoder padding mask
     enc_padding_mask = create_padding_mask(input_seq)
 
     # Used in the 2nd attention block in the decoder.
@@ -40,16 +38,8 @@ def create_masks(input_seq, target_seq, device='cuda'):
     look_ahead_mask = create_lookahead_mask(target_seq.shape[1])
     dec_target_padding_mask = create_padding_mask(target_seq)
 
-    # print(target_seq.shape, look_ahead_mask.shape, dec_target_padding_mask.shape)
-
     # NOTE: torch nn.MHA takes separate padding & attn masks w/ different shapes,
-    #       so use that instead of combining here. TODO: check the source for how
-    #       they combine.
-    #
-    # # TODO: WTF is combined_mask used for???
-    # # TODO: can I verify this...?
-    # combined_mask = torch.fmax(look_ahead_mask, dec_target_padding_mask.unsqueeze(1))
-
+    #       so use that instead of combining here
     return enc_padding_mask.to(device), dec_padding_mask.to(device), dec_target_padding_mask.to(device), look_ahead_mask.to(device)
 
 

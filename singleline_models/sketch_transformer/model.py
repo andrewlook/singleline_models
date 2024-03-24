@@ -61,6 +61,13 @@ class Decoder(nn.Module):
         # add positional embedding, and apply dropout
         x = self.pos_encoding(x)
 
+        # print(f"\t\tDecoder.forward: x={x.shape}")
+        # print(f"\t\tDecoder.forward: enc_output={enc_output.shape}")
+
+        # print(f"\t\tDecoder.forward: padding_mask={padding_mask.shape}")
+        # print(f"\t\tDecoder.forward: dec_target_padding_mask={dec_target_padding_mask.shape}")
+        # print(f"\t\tDecoder.forward: look_ahead_mask={look_ahead_mask.shape}")
+
         attention_weights = {}
         for i, layer in enumerate(self.dec_layers):
             x, block1, block2 = layer(x, enc_output, padding_mask, dec_target_padding_mask, look_ahead_mask)
@@ -76,14 +83,26 @@ class ReconstructionLoss(nn.Module):
    
     def forward(self, pred, real):
         pred_locations = pred[:, :, :2]
-        # pred_metadata = pred[:, :, 2:]
-        tgt_locations = real[:, :, :2]
-        # tgt_metadata = real[:, :, 2:]
-        location_loss = F.mse_loss(pred_locations, tgt_locations) #, reduction='none')
-        return location_loss
+        real_locations = real[:, :, :2]
+        location_loss = F.mse_loss(pred_locations, real_locations)
+
+        pred_metadata = pred[:, :, 2:] # un-normalized logits
+        real_metadata = real[:, :, 2:] # true labels in probability spaces (add up to 1).
+
+        # for K-dimensional inputs, torch cross_entropy() requires:
+        # - batch as first dimension,
+        # - class as second,
+        # - ... other dimensions
+        pred_metadata = pred_metadata.transpose(2, 1) # [batch_size, n_classes, n_seq]
+        real_idx = torch.argmax(real_metadata.transpose(2, 1), dim=1) # [batch_size, n_seq]
+
+        metadata_loss = F.cross_entropy(pred_metadata, real_idx)
+
+        loss = location_loss + metadata_loss
+
+        # import ipdb; ipdb.set_trace()
         
-        # metadata_loss = F.cross_entropy(F.softmax(pred_metadata, dim=-1), F.softmax(tgt_metadata, dim=-1)) #, reduction='none')
-        # return location_loss, metadata_loss
+        return loss
 
 # %% ../../nbs/sketch_transformer/02_model.ipynb 8
 class Model(nn.Module):
@@ -116,13 +135,36 @@ class Model(nn.Module):
         """Generate logits"""
         padding_mask = torch.zeros_like(dec_padding_mask) if self.hp.blind_decoder_mask else dec_padding_mask
         pre_decoder = self.expand_layer(embedding)
-        dec_output, attention_weights = self.decoder(target, pre_decoder, padding_mask, dec_target_padding_mask, look_ahead_mask)
+
+        # print(f"\tModel.decode: embedding={embedding.shape}")
+        # print(f"\tModel.decode: pre_decoder={pre_decoder.shape}")
+
+        # print(f"\tModel.decode: target={target.shape}")
+        
+        # print(f"\tModel.decode: dec_padding_mask={padding_mask.shape}")
+        # print(f"\tModel.decode: dec_target_padding_mask={dec_target_padding_mask.shape}")
+        # print(f"\tModel.decode: look_ahead_mask={look_ahead_mask.shape}")
+        
+        dec_output, attention_weights = self.decoder(
+            x=target,
+            enc_output=pre_decoder,
+            padding_mask=padding_mask,
+            dec_target_padding_mask=dec_target_padding_mask,
+            look_ahead_mask=look_ahead_mask)
         final_output = self.output_layer(dec_output)
         return final_output, attention_weights
 
     def forward(self, input_seq, target_seq, enc_padding_mask, dec_padding_mask, dec_target_padding_mask, look_ahead_mask):
         lowerdim_output, enc_output = self.encode(input_seq, enc_padding_mask)
-        final_output, attention_weights = self.decode(lowerdim_output, target_seq, dec_padding_mask, dec_target_padding_mask, look_ahead_mask)
+        # print(f"\tModel.forward: lowerdim_output.shape={lowerdim_output.shape}")
+        # print(f"\tModel.forward: enc_output.shape={enc_output.shape}")
+        
+        final_output, attention_weights = self.decode(
+            embedding=lowerdim_output,
+            target=target_seq,
+            dec_padding_mask=dec_padding_mask,
+            dec_target_padding_mask=dec_target_padding_mask,
+            look_ahead_mask=look_ahead_mask)
         return final_output, lowerdim_output #, enc_output, attention_weights
 
     # def encode_from_seq(self, inp_seq):
