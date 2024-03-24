@@ -76,7 +76,7 @@ class ReconstructionLoss(nn.Module):
     def forward(self, pred, real):
         pred_locations = pred[:, :, :2]
         real_locations = real[:, :, :2]
-        location_loss = F.mse_loss(pred_locations, real_locations, reduce=False) # [batch_size, n_seq, 2]
+        location_loss = F.mse_loss(pred_locations, real_locations, reduction='none') # [batch_size, n_seq, 2]
         location_loss = torch.mean(location_loss, dim=2) # [batch_size, n_seq]
 
         pred_metadata = pred[:, :, 2:] # un-normalized logits
@@ -87,7 +87,7 @@ class ReconstructionLoss(nn.Module):
         # - ... other dimensions
         pred_metadata = pred_metadata.transpose(2, 1) # [batch_size, n_classes, n_seq]
         real_idx = torch.argmax(real_metadata.transpose(2, 1), dim=1) # [batch_size, n_seq]
-        metadata_loss = F.cross_entropy(pred_metadata, real_idx, reduce=False) # [batch_size, n_seq]
+        metadata_loss = F.cross_entropy(pred_metadata, real_idx, reduction='none') # [batch_size, n_seq]
 
         # final dimension is "end-of-sequence" - invert it to get a mask for valid parts of the sequence
         mask = torch.abs(real[..., -1]-1) # [batch_size, n_seq] 

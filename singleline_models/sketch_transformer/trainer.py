@@ -236,7 +236,6 @@ class Trainer():
     def train_one_epoch(self, epoch, parent_progressbar=None):
         steps_per_epoch = len(self.train_loader)
         for idx, batch in enumerate(progress_bar(iter(self.train_loader), parent=parent_progressbar)):
-            self.scheduler.step()
             self.total_steps = idx + epoch * steps_per_epoch
             _, loss, loss_extras = self.step(batch, is_training=True)
             self.log(dict(
@@ -245,6 +244,7 @@ class Trainer():
                 learning_rate=self.optimizer.param_groups[0]['lr'],
                 **loss_extras
             ))
+            self.scheduler.step()
         
     def train(self):
         mb = master_bar(range(self.hp.epochs))
