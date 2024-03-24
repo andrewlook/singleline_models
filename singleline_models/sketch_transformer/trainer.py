@@ -198,7 +198,7 @@ class Trainer():
         enc_padding_mask, dec_padding_mask, dec_target_padding_mask, look_ahead_mask = create_masks(inp, tar_inp, device=self.device)
 
         recon, _ = self.model(inp, tar_inp, enc_padding_mask, dec_padding_mask, dec_target_padding_mask, look_ahead_mask)
-        loss = self.loss(recon, tar_real)
+        loss, loss_extras = self.loss(recon, tar_real)
 
         # Only if we are in training state
         if is_training:
@@ -213,14 +213,14 @@ class Trainer():
             
             # Optimize
             self.optimizer.step()
-        return data.shape[0], loss.item()
+        return data.shape[0], loss.item(), loss_extras
 
     def validate_one_epoch(self, epoch):
         self.model.eval()
         total_items, total_loss = 0, 0
         with torch.no_grad():    
             for batch in iter(self.valid_loader):
-                batch_items, loss = self.step(batch, is_training=False)
+                batch_items, loss, _ = self.step(batch, is_training=False)
 
                 total_loss += loss * batch_items
                 total_items += batch_items
@@ -236,11 +236,13 @@ class Trainer():
         for idx, batch in enumerate(progress_bar(iter(self.train_loader), parent=parent_progressbar)):
             self.scheduler.step()
             self.total_steps = idx + epoch * steps_per_epoch
-            _, loss = self.step(batch, is_training=True)
+            _, loss, loss_extras = self.step(batch, is_training=True)
             self.log(dict(
                 loss=loss,
                 epoch=epoch,
-                learning_rate=self.optimizer.param_groups[0]['lr']))
+                learning_rate=self.optimizer.param_groups[0]['lr'],
+                **loss_extras
+            ))
         
     def train(self):
         mb = master_bar(range(self.hp.epochs))

@@ -77,25 +77,32 @@ class ReconstructionLoss(nn.Module):
     def forward(self, pred, real):
         pred_locations = pred[:, :, :2]
         real_locations = real[:, :, :2]
-        location_loss = F.mse_loss(pred_locations, real_locations)
+        location_loss = F.mse_loss(pred_locations, real_locations, reduce=False) # [batch_size, n_seq, 2]
+        location_loss = torch.mean(location_loss, dim=2) # [batch_size, n_seq]
 
         pred_metadata = pred[:, :, 2:] # un-normalized logits
         real_metadata = real[:, :, 2:] # true labels in probability spaces (add up to 1).
-
         # for K-dimensional inputs, torch cross_entropy() requires:
         # - batch as first dimension,
         # - class as second,
         # - ... other dimensions
         pred_metadata = pred_metadata.transpose(2, 1) # [batch_size, n_classes, n_seq]
         real_idx = torch.argmax(real_metadata.transpose(2, 1), dim=1) # [batch_size, n_seq]
+        metadata_loss = F.cross_entropy(pred_metadata, real_idx, reduce=False) # [batch_size, n_seq]
 
-        metadata_loss = F.cross_entropy(pred_metadata, real_idx)
+        # final dimension is "end-of-sequence" - invert it to get a mask for valid parts of the sequence
+        mask = torch.abs(real[..., -1]-1) # [batch_size, n_seq] 
+
+        # slightly less efficient to mask & average these parts of the loss separately, but this allows
+        # logging them separately during training runs.
+        location_loss *= mask
+        location_loss = torch.mean(location_loss)
+        metadata_loss *= mask
+        metadata_loss = torch.mean(metadata_loss)
 
         loss = location_loss + metadata_loss
-
-        # import ipdb; ipdb.set_trace()
         
-        return loss
+        return loss, dict(location_loss=location_loss, metadata_loss=metadata_loss)
 
 # %% ../../nbs/sketch_transformer/02_model.ipynb 8
 class Model(nn.Module):
