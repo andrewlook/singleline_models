@@ -63,9 +63,7 @@ def get_default_config():
 
     C.epochs = 50000
     C.lr = 1e-3
-    C.use_lr_decay = True
-    C.min_lr = 1e-5
-    C.lr_decay = 0.9999
+    C.grad_clip = 1.0
     
     return C
 
@@ -213,8 +211,8 @@ class Trainer():
             # Compute gradients
             loss.backward()
             
-            # # Clip gradients
-            # nn.utils.clip_grad_norm_(self.model.parameters(), self.hp.grad_clip)
+            # Clip gradients
+            nn.utils.clip_grad_norm_(self.model.parameters(), self.hp.grad_clip)
             
             # Optimize
             self.optimizer.step()
