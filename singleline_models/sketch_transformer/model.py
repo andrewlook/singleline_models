@@ -161,5 +161,3 @@ class Model(nn.Module):
         with torch.no_grad():
             res = self.encode(inp_seq, enc_padding_mask)
             return res
-  
-      

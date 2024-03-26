@@ -52,7 +52,7 @@ def create_masks(input_seq, target_seq, device='cuda'):
     return enc_padding_mask.to(device), dec_padding_mask.to(device), dec_target_padding_mask.to(device), look_ahead_mask.to(device)
 
 
-def make_dummy_input(total_seq_len, nattn, batch_size):
+def make_dummy_input(total_seq_len, nattn, batch_size, expected_len=None):
   nignore = total_seq_len - nattn
   return torch.cat([
       torch.ones(batch_size, nattn, 5) * torch.tensor([0., 0., 0., 0., 0.]),

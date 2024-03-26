@@ -76,8 +76,8 @@ class DecoderLayer(nn.Module):
         attn1, attn1_weights = self.mha1(x, x, x, key_padding_mask=dec_target_padding_mask, attn_mask=look_ahead_mask)
         out1 = self.ln1(x + attn1)
 
-        x2 = enc_output[:, :out1.shape[1], ...]
-        attn2, attn2_weights = self.mha2(x2, x2, out1, dec_target_padding_mask)
+        x2 = enc_output # [:, :out1.shape[1], ...]
+        attn2, attn2_weights = self.mha2(out1, x2, x2, padding_mask)
         out2 = self.ln2(out1 + attn2)
         
         ffn_output = self.ffn(out2)

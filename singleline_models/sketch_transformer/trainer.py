@@ -145,8 +145,10 @@ class Trainer():
             json.dump(self.hp.__dict__, outfile, indent=2)
 
     @staticmethod
-    def load(self, **trainer_args):
-        with open(Path(self.run_dir) / f'runid-{self.run_id}.json', 'r') as infile:
+    def load(run_dir, run_id, **trainer_args):
+        config_path = Path(run_dir) / f'runid-{run_id}.json'
+        model_path = Path(run_dir) / f'runid-{run_id}.pth'
+        with open(config_path, 'r') as infile:
             saved_hp = json.load(infile)
         hp = get_default_config()
         hp.merge_from_dict(saved_hp)
@@ -155,7 +157,7 @@ class Trainer():
         extra_args = {}
         if trainer.device != 'cuda':
             extra_args=dict(map_location=torch.device('cpu'))
-        saved_model = torch.load(Path(self.run_dir) / f'runid-{self.run_id}.pth', **extra_args)
+        saved_model = torch.load(model_path, **extra_args)
 
         trainer.model.load_state_dict(saved_model)
         return trainer
