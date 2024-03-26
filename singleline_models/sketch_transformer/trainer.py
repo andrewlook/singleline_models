@@ -14,6 +14,7 @@ from typing import Any
 import numpy as np
 import torch
 import torch.nn as nn
+import wandb
 from fastprogress.fastprogress import master_bar, progress_bar
 from PIL import Image
 from torch import optim
@@ -100,7 +101,6 @@ class Trainer():
         # create a unique run ID, to distinguish saved model checkpoints / sample images
         self.run_id = f"{math.floor(np.random.rand() * 1e6):07d}"
         if self.use_wandb:
-            import wandb
             run = wandb.init(
                 project=wandb_project,
                 entity=wandb_entity,
