@@ -128,7 +128,8 @@ class Trainer():
         if self.use_wandb:
             wandb.watch(self.model, log="all", log_freq=10, log_graph=True)
 
-        self.optimizer = optim.AdamW(self.model.parameters(), lr=3e-4)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=3e-4)
+        # self.optimizer = optim.AdamW(self.model.parameters(), lr=3e-4)
         self.scheduler = get_cosine_schedule_with_warmup(optimizer=self.optimizer, num_warmup_steps=1000, num_training_steps=50000)
 
         self.train_dataset, self.train_loader, self.valid_dataset, self.valid_loader = create_dataloaders(hp)
