@@ -54,6 +54,7 @@ class SketchRNNModel(nn.Module):
             layer_norm_learnable=self.hp.layer_norm_learnable,
             lstm_impl=self.hp.lstm_impl,
         ).to(self.device)
+        # TODO: register parameters?
     
     @staticmethod
     def get_default_config():
