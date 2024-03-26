@@ -1,0 +1,215 @@
+[
+  {
+    "objectID": "sketch_rnn/layers.html",
+    "href": "sketch_rnn/layers.html",
+    "title": "layers",
+    "section": "",
+    "text": "source",
+    "crumbs": [
+      "sketch_rnn",
+      "layers"
+    ]
+  },
+  {
+    "objectID": "sketch_rnn/layers.html#encoder-module",
+    "href": "sketch_rnn/layers.html#encoder-module",
+    "title": "layers",
+    "section": "Encoder module",
+    "text": "Encoder module\nThis consists of a bidirectional LSTM\n\nsource\n\nBivariateGaussianMixture\n\n BivariateGaussianMixture (pi_logits:torch.Tensor, mu_x:torch.Tensor,\n                           mu_y:torch.Tensor, sigma_x:torch.Tensor,\n                           sigma_y:torch.Tensor, rho_xy:torch.Tensor)",
+    "crumbs": [
+      "sketch_rnn",
+      "layers"
+    ]
+  },
+  {
+    "objectID": "sketch_rnn/layers.html#bi-variate-gaussian-mixture",
+    "href": "sketch_rnn/layers.html#bi-variate-gaussian-mixture",
+    "title": "layers",
+    "section": "Bi-variate Gaussian mixture",
+    "text": "Bi-variate Gaussian mixture\nThe mixture is represented by \\(\\Pi\\) and \\(\\mathcal{N}(\\mu_{x}, \\mu_{y}, \\sigma_{x}, \\sigma_{y}, ho_{xy})\\). This class adjusts temperatures and creates the categorical and Gaussian distributions from the parameters.\n\nsource\n\nDecoderRNN\n\n DecoderRNN (d_z:int, dec_hidden_size:int, n_distributions:int,\n             use_recurrent_dropout=False, r_dropout_prob=0.0,\n             use_layer_norm=False, layer_norm_learnable=False,\n             lstm_impl='builtin')\n\nBase class for all neural network modules.\nYour models should also subclass this class.\nModules can also contain other Modules, allowing to nest them in a tree structure. You can assign the submodules as regular attributes::\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass Model(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.conv1 = nn.Conv2d(1, 20, 5)\n        self.conv2 = nn.Conv2d(20, 20, 5)\n\n    def forward(self, x):\n        x = F.relu(self.conv1(x))\n        return F.relu(self.conv2(x))\nSubmodules assigned in this way will be registered, and will have their parameters converted too when you call :meth:to, etc.\n.. note:: As per the example above, an __init__() call to the parent class must be made before assignment on the child.\n:ivar training: Boolean represents whether this module is in training or evaluation mode. :vartype training: bool\n\nsource\n\n\nReconstructionLoss\n\n ReconstructionLoss (*args, **kwargs)",
+    "crumbs": [
+      "sketch_rnn",
+      "layers"
+    ]
+  },
+  {
+    "objectID": "sketch_rnn/layers.html#reconstruction-loss",
+    "href": "sketch_rnn/layers.html#reconstruction-loss",
+    "title": "layers",
+    "section": "Reconstruction Loss",
+    "text": "Reconstruction Loss\n\nsource\n\nKLDivLoss\n\n KLDivLoss (*args, **kwargs)\n\nThis calculates the KL divergence between a given normal distribution and \\(\\mathcal{N}(0, 1)\\)",
+    "crumbs": [
+      "sketch_rnn",
+      "layers"
+    ]
+  },
+  {
+    "objectID": "dataset.html",
+    "href": "dataset.html",
+    "title": "dataset",
+    "section": "",
+    "text": "source",
+    "crumbs": [
+      "dataset"
+    ]
+  },
+  {
+    "objectID": "dataset.html#dataset",
+    "href": "dataset.html#dataset",
+    "title": "dataset",
+    "section": "Dataset",
+    "text": "Dataset\nThis class loads and pre-processes the data.\n\nsource\n\nrandom_scale\n\n random_scale (data, random_scale_factor=0.15)\n\nAugment data by stretching x and y axis randomly [1-e, 1+e].\n\nsource\n\n\naugment_strokes\n\n augment_strokes (strokes, prob=0.0)\n\nPerform data augmentation by randomly dropping out strokes.\n\nsource\n\n\ncreate_dataloaders\n\n create_dataloaders (hp:singleline_models.utils.CfgNode)",
+    "crumbs": [
+      "dataset"
+    ]
+  },
+  {
+    "objectID": "sketch_transformer/sampler.html",
+    "href": "sketch_transformer/sampler.html",
+    "title": "sampler",
+    "section": "",
+    "text": "source\n\nSampler\n\n Sampler ()\n\nThis samples a sketch from the decoder and plots it",
+    "crumbs": [
+      "sketch_transformer",
+      "sampler"
+    ]
+  },
+  {
+    "objectID": "sketch_transformer/model.html",
+    "href": "sketch_transformer/model.html",
+    "title": "model",
+    "section": "",
+    "text": "source\n\nEncoder\n\n Encoder (num_layers, d_model, num_heads, d_ff, max_seq_len, dropout_rate)\n\nBase class for all neural network modules.\nYour models should also subclass this class.\nModules can also contain other Modules, allowing to nest them in a tree structure. You can assign the submodules as regular attributes::\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass Model(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.conv1 = nn.Conv2d(1, 20, 5)\n        self.conv2 = nn.Conv2d(20, 20, 5)\n\n    def forward(self, x):\n        x = F.relu(self.conv1(x))\n        return F.relu(self.conv2(x))\nSubmodules assigned in this way will be registered, and will have their parameters converted too when you call :meth:to, etc.\n.. note:: As per the example above, an __init__() call to the parent class must be made before assignment on the child.\n:ivar training: Boolean represents whether this module is in training or evaluation mode. :vartype training: bool\n\nsource\n\n\nDecoder\n\n Decoder (num_layers, d_model, num_heads, d_ff, max_seq_len=1000,\n          dropout_rate=0.1)\n\nBase class for all neural network modules.\nYour models should also subclass this class.\nModules can also contain other Modules, allowing to nest them in a tree structure. You can assign the submodules as regular attributes::\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass Model(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.conv1 = nn.Conv2d(1, 20, 5)\n        self.conv2 = nn.Conv2d(20, 20, 5)\n\n    def forward(self, x):\n        x = F.relu(self.conv1(x))\n        return F.relu(self.conv2(x))\nSubmodules assigned in this way will be registered, and will have their parameters converted too when you call :meth:to, etc.\n.. note:: As per the example above, an __init__() call to the parent class must be made before assignment on the child.\n:ivar training: Boolean represents whether this module is in training or evaluation mode. :vartype training: bool\n\nsource\n\n\nReconstructionLoss\n\n ReconstructionLoss (*args, **kwargs)\n\nBase class for all neural network modules.\nYour models should also subclass this class.\nModules can also contain other Modules, allowing to nest them in a tree structure. You can assign the submodules as regular attributes::\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass Model(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.conv1 = nn.Conv2d(1, 20, 5)\n        self.conv2 = nn.Conv2d(20, 20, 5)\n\n    def forward(self, x):\n        x = F.relu(self.conv1(x))\n        return F.relu(self.conv2(x))\nSubmodules assigned in this way will be registered, and will have their parameters converted too when you call :meth:to, etc.\n.. note:: As per the example above, an __init__() call to the parent class must be made before assignment on the child.\n:ivar training: Boolean represents whether this module is in training or evaluation mode. :vartype training: bool\n\nsource\n\n\nModel\n\n Model (hp)\n\nBase class for all neural network modules.\nYour models should also subclass this class.\nModules can also contain other Modules, allowing to nest them in a tree structure. You can assign the submodules as regular attributes::\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass Model(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.conv1 = nn.Conv2d(1, 20, 5)\n        self.conv2 = nn.Conv2d(20, 20, 5)\n\n    def forward(self, x):\n        x = F.relu(self.conv1(x))\n        return F.relu(self.conv2(x))\nSubmodules assigned in this way will be registered, and will have their parameters converted too when you call :meth:to, etc.\n.. note:: As per the example above, an __init__() call to the parent class must be made before assignment on the child.\n:ivar training: Boolean represents whether this module is in training or evaluation mode. :vartype training: bool",
+    "crumbs": [
+      "sketch_transformer",
+      "model"
+    ]
+  },
+  {
+    "objectID": "sketch_transformer/layers.html",
+    "href": "sketch_transformer/layers.html",
+    "title": "layers",
+    "section": "",
+    "text": "source\n\nEncoderLayer\n\n EncoderLayer (enc_hidden_size:int, num_heads:int, d_ff:int,\n               max_seq_len:int, dropout_prob=0.0)\n\nBase class for all neural network modules.\nYour models should also subclass this class.\nModules can also contain other Modules, allowing to nest them in a tree structure. You can assign the submodules as regular attributes::\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass Model(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.conv1 = nn.Conv2d(1, 20, 5)\n        self.conv2 = nn.Conv2d(20, 20, 5)\n\n    def forward(self, x):\n        x = F.relu(self.conv1(x))\n        return F.relu(self.conv2(x))\nSubmodules assigned in this way will be registered, and will have their parameters converted too when you call :meth:to, etc.\n.. note:: As per the example above, an __init__() call to the parent class must be made before assignment on the child.\n\nivar training: Boolean represents whether this module is in training or evaluation mode. :vartype training: bool\n\n\n\nType\nDefault\nDetails\n\n\n\n\nenc_hidden_size\nint\n\nd_model\n\n\nnum_heads\nint\n\n\n\n\nd_ff\nint\n\n\n\n\nmax_seq_len\nint\n\n\n\n\ndropout_prob\nfloat\n0.0\n\n\n\n\n\nsource\n\n\nDecoderLayer\n\n DecoderLayer (d_model:int, num_heads:int, d_ff:int, max_seq_len:int,\n               dropout_prob=0.0)\n\nBase class for all neural network modules.\nYour models should also subclass this class.\nModules can also contain other Modules, allowing to nest them in a tree structure. You can assign the submodules as regular attributes::\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass Model(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.conv1 = nn.Conv2d(1, 20, 5)\n        self.conv2 = nn.Conv2d(20, 20, 5)\n\n    def forward(self, x):\n        x = F.relu(self.conv1(x))\n        return F.relu(self.conv2(x))\nSubmodules assigned in this way will be registered, and will have their parameters converted too when you call :meth:to, etc.\n.. note:: As per the example above, an __init__() call to the parent class must be made before assignment on the child.\n:ivar training: Boolean represents whether this module is in training or evaluation mode. :vartype training: bool\n\nsource\n\n\nPositionalEncoding\n\n PositionalEncoding (d_model:int, dropout:float=0.1, max_len:int=252,\n                     batch_size:int=100)\n\nBase class for all neural network modules.\nYour models should also subclass this class.\nModules can also contain other Modules, allowing to nest them in a tree structure. You can assign the submodules as regular attributes::\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass Model(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.conv1 = nn.Conv2d(1, 20, 5)\n        self.conv2 = nn.Conv2d(20, 20, 5)\n\n    def forward(self, x):\n        x = F.relu(self.conv1(x))\n        return F.relu(self.conv2(x))\nSubmodules assigned in this way will be registered, and will have their parameters converted too when you call :meth:to, etc.\n.. note:: As per the example above, an __init__() call to the parent class must be made before assignment on the child.\n:ivar training: Boolean represents whether this module is in training or evaluation mode. :vartype training: bool\n\nsource\n\n\nSelfAttn\n\n SelfAttn (d_model, d_lowerdim)\n\nCompute a single embedding based on a whole sequence of embedding outputs from multi-head attention layers, as described in End-to-End Memory Networks: https://arxiv.org/abs/1503.08895\n\nsource\n\n\nDenseExpander\n\n DenseExpander (in_dim, out_dim, seq_len)\n\nBase class for all neural network modules.\nYour models should also subclass this class.\nModules can also contain other Modules, allowing to nest them in a tree structure. You can assign the submodules as regular attributes::\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass Model(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.conv1 = nn.Conv2d(1, 20, 5)\n        self.conv2 = nn.Conv2d(20, 20, 5)\n\n    def forward(self, x):\n        x = F.relu(self.conv1(x))\n        return F.relu(self.conv2(x))\nSubmodules assigned in this way will be registered, and will have their parameters converted too when you call :meth:to, etc.\n.. note:: As per the example above, an __init__() call to the parent class must be made before assignment on the child.\n:ivar training: Boolean represents whether this module is in training or evaluation mode. :vartype training: bool",
+    "crumbs": [
+      "sketch_transformer",
+      "layers"
+    ]
+  },
+  {
+    "objectID": "lstm/index.html",
+    "href": "lstm/index.html",
+    "title": "singleline_models.lstm",
+    "section": "",
+    "text": "source\n\nlstm_layer\n\n lstm_layer (ni, nh, bidirectional=False, use_recurrent_dropout=False,\n             r_dropout_prob=0.0, use_layer_norm=False,\n             layer_norm_learnable=False, lstm_impl='builtin')\n\nCreates an LSTM layer, using a different underlying LSTM implementation. - ‘builtin’ uses pytorch nn.LSTM - ‘rnnlib’ uses LayerNormLSTM from rnnlib",
+    "crumbs": [
+      "lstm"
+    ]
+  },
+  {
+    "objectID": "utils.html",
+    "href": "utils.html",
+    "title": "utils",
+    "section": "",
+    "text": "source\n\nset_seed\n\n set_seed (seed)\n\n\nsource\n\n\nCfgNode\n\n CfgNode (**kwargs)\n\na lightweight configuration class inspired by yacs\n\nsource\n\n\nCfgNode.to_dict\n\n CfgNode.to_dict ()\n\nreturn a dict representation of the config\n\nsource\n\n\nCfgNode.merge_from_dict\n\n CfgNode.merge_from_dict (d)\n\n\nsource\n\n\nCfgNode.merge_from_args\n\n CfgNode.merge_from_args (args)\n\nupdate the configuration from a list of strings that is expected to come from the command line, i.e. sys.argv[1:].\nThe arguments are expected to be in the form of --arg=value, and the arg can use . to denote nested sub-attributes. Example:\n–model.n_layer=10 –trainer.batch_size=32",
+    "crumbs": [
+      "utils"
+    ]
+  },
+  {
+    "objectID": "lstm/custom_lstm.html",
+    "href": "lstm/custom_lstm.html",
+    "title": "custom_lstm",
+    "section": "",
+    "text": "source\n\nget_module_device\n\n get_module_device (model)\n\n\nsource\n\n\nis_cuda_enabled\n\n is_cuda_enabled (model)\n\n\nsource\n\n\nrepeat_lstm_state\n\n repeat_lstm_state (state, batch_size)\n\n\nsource\n\n\ncreate_lstm_init_state\n\n create_lstm_init_state (num_layers, num_directions, hidden_size,\n                         init_state_learned=True, device=None)\n\n:param hidden_size: :param init_state_learned: :returns: init_state is a input of lstm cells. _init_state is saved as a parameter of model (such as self._init_state)\n\nsource\n\n\nrepeat_lstm_cell_state\n\n repeat_lstm_cell_state (state, batch_size)\n\n\nsource\n\n\ncreate_lstm_cell_init_state\n\n create_lstm_cell_init_state (hidden_size, init_state_learned=True,\n                              device=None)\n\n:param hidden_size: :param init_state_learned: :returns: init_state is a input of lstm cells. _init_state is saved as a parameter of model (such as self._init_state)\n\nsource\n\n\nget_indicator\n\n get_indicator (length_tensor, max_length=None)\n\n:param length_tensor: :param max_length: :returns: a tensor where positions within ranges are set to 1\n\nsource\n\n\nLSTMCell\n\n LSTMCell (input_size, hidden_size)\n\nstandard LSTM cell\n\nsource\n\n\nLSTMFrame\n\n LSTMFrame (rnn_cells, batch_first=False, dropout=0, bidirectional=False)\n\nWrapper of RNNFrame. The ‘for_lstm’ option is always ‘True’.\n\nsource\n\n\nRNNFrame\n\n RNNFrame (rnn_cells, for_lstm=False, batch_first=False, dropout=0,\n           bidirectional=False)\n\nBase class for all neural network modules.\nYour models should also subclass this class.\nModules can also contain other Modules, allowing to nest them in a tree structure. You can assign the submodules as regular attributes::\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass Model(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.conv1 = nn.Conv2d(1, 20, 5)\n        self.conv2 = nn.Conv2d(20, 20, 5)\n\n    def forward(self, x):\n        x = F.relu(self.conv1(x))\n        return F.relu(self.conv2(x))\nSubmodules assigned in this way will be registered, and will have their parameters converted too when you call :meth:to, etc.\n.. note:: As per the example above, an __init__() call to the parent class must be made before assignment on the child.\n:ivar training: Boolean represents whether this module is in training or evaluation mode. :vartype training: bool\n\nsource\n\n\nforward_rnn\n\n forward_rnn (rnn, init_state, input, lengths, batch_first=False,\n              embedding:torch.nn.modules.sparse.Embedding=None,\n              dropout:torch.nn.modules.dropout.Dropout=None,\n              return_packed_output=False)\n\n\nsource\n\n\nLayerNormLSTM\n\n LayerNormLSTM (input_size, hidden_size, num_layers=1, batch_first=False,\n                dropout=0, r_dropout=0, bidirectional=False,\n                layer_norm_enabled=True)\n\nWrapper of RNNFrame. The ‘for_lstm’ option is always ‘True’.\n\nsource\n\n\nLayerNormLSTMCell\n\n LayerNormLSTMCell (input_size, hidden_size, dropout=None,\n                    layer_norm_enabled=True, cell_ln=None)\n\nIt’s based on tf.contrib.rnn.LayerNormBasicLSTMCell Reference: - https://www.tensorflow.org/api_docs/python/tf/contrib/rnn/LayerNormBasicLSTMCell - https://github.com/tensorflow/tensorflow/blob/r1.12/tensorflow/contrib/rnn/python/ops/rnn_cell.py#L1335\n\nsource\n\n\nLayerNormRNNCell\n\n LayerNormRNNCell (input_size, hidden_size, layer_norm_enabled=True)\n\nBase class for all neural network modules.\nYour models should also subclass this class.\nModules can also contain other Modules, allowing to nest them in a tree structure. You can assign the submodules as regular attributes::\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass Model(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.conv1 = nn.Conv2d(1, 20, 5)\n        self.conv2 = nn.Conv2d(20, 20, 5)\n\n    def forward(self, x):\n        x = F.relu(self.conv1(x))\n        return F.relu(self.conv2(x))\nSubmodules assigned in this way will be registered, and will have their parameters converted too when you call :meth:to, etc.\n.. note:: As per the example above, an __init__() call to the parent class must be made before assignment on the child.\n:ivar training: Boolean represents whether this module is in training or evaluation mode. :vartype training: bool",
+    "crumbs": [
+      "lstm",
+      "custom_lstm"
+    ]
+  },
+  {
+    "objectID": "lstm/rnnlib.html",
+    "href": "lstm/rnnlib.html",
+    "title": "rnnlib",
+    "section": "",
+    "text": "source\n\nget_module_device\n\n get_module_device (model)\n\n\nsource\n\n\nis_cuda_enabled\n\n is_cuda_enabled (model)\n\n\nsource\n\n\nrepeat_lstm_state\n\n repeat_lstm_state (state, batch_size)\n\n\nsource\n\n\ncreate_lstm_init_state\n\n create_lstm_init_state (num_layers, num_directions, hidden_size,\n                         init_state_learned=True, device=None)\n\n:param hidden_size: :param init_state_learned: :returns: init_state is a input of lstm cells. _init_state is saved as a parameter of model (such as self._init_state)\n\nsource\n\n\nrepeat_lstm_cell_state\n\n repeat_lstm_cell_state (state, batch_size)\n\n\nsource\n\n\ncreate_lstm_cell_init_state\n\n create_lstm_cell_init_state (hidden_size, init_state_learned=True,\n                              device=None)\n\n:param hidden_size: :param init_state_learned: :returns: init_state is a input of lstm cells. _init_state is saved as a parameter of model (such as self._init_state)\n\nsource\n\n\nget_indicator\n\n get_indicator (length_tensor, max_length=None)\n\n:param length_tensor: :param max_length: :returns: a tensor where positions within ranges are set to 1\n\nsource\n\n\nLSTMCell\n\n LSTMCell (input_size, hidden_size)\n\nstandard LSTM cell\n\nsource\n\n\nLSTMFrame\n\n LSTMFrame (rnn_cells, batch_first=False, dropout=0, bidirectional=False)\n\nWrapper of RNNFrame. The ‘for_lstm’ option is always ‘True’.\n\nsource\n\n\nRNNFrame\n\n RNNFrame (rnn_cells, for_lstm=False, batch_first=False, dropout=0,\n           bidirectional=False)\n\nBase class for all neural network modules.\nYour models should also subclass this class.\nModules can also contain other Modules, allowing to nest them in a tree structure. You can assign the submodules as regular attributes::\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass Model(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.conv1 = nn.Conv2d(1, 20, 5)\n        self.conv2 = nn.Conv2d(20, 20, 5)\n\n    def forward(self, x):\n        x = F.relu(self.conv1(x))\n        return F.relu(self.conv2(x))\nSubmodules assigned in this way will be registered, and will have their parameters converted too when you call :meth:to, etc.\n.. note:: As per the example above, an __init__() call to the parent class must be made before assignment on the child.\n:ivar training: Boolean represents whether this module is in training or evaluation mode. :vartype training: bool\n\nsource\n\n\nforward_rnn\n\n forward_rnn (rnn, init_state, input, lengths, batch_first=False,\n              embedding:torch.nn.modules.sparse.Embedding=None,\n              dropout:torch.nn.modules.dropout.Dropout=None,\n              return_packed_output=False)\n\n\nsource\n\n\nLayerNormLSTM\n\n LayerNormLSTM (input_size, hidden_size, num_layers=1, batch_first=False,\n                dropout=0, r_dropout=0, bidirectional=False,\n                layer_norm_enabled=True)\n\nWrapper of RNNFrame. The ‘for_lstm’ option is always ‘True’.\n\nsource\n\n\nLayerNormLSTMCell\n\n LayerNormLSTMCell (input_size, hidden_size, dropout=None,\n                    layer_norm_enabled=True, cell_ln=None)\n\nIt’s based on tf.contrib.rnn.LayerNormBasicLSTMCell Reference: - https://www.tensorflow.org/api_docs/python/tf/contrib/rnn/LayerNormBasicLSTMCell - https://github.com/tensorflow/tensorflow/blob/r1.12/tensorflow/contrib/rnn/python/ops/rnn_cell.py#L1335\n\nsource\n\n\nLayerNormRNNCell\n\n LayerNormRNNCell (input_size, hidden_size, layer_norm_enabled=True)\n\nBase class for all neural network modules.\nYour models should also subclass this class.\nModules can also contain other Modules, allowing to nest them in a tree structure. You can assign the submodules as regular attributes::\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass Model(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.conv1 = nn.Conv2d(1, 20, 5)\n        self.conv2 = nn.Conv2d(20, 20, 5)\n\n    def forward(self, x):\n        x = F.relu(self.conv1(x))\n        return F.relu(self.conv2(x))\nSubmodules assigned in this way will be registered, and will have their parameters converted too when you call :meth:to, etc.\n.. note:: As per the example above, an __init__() call to the parent class must be made before assignment on the child.\n:ivar training: Boolean represents whether this module is in training or evaluation mode. :vartype training: bool",
+    "crumbs": [
+      "lstm",
+      "rnnlib"
+    ]
+  },
+  {
+    "objectID": "sketch_transformer/trainer.html",
+    "href": "sketch_transformer/trainer.html",
+    "title": "trainer",
+    "section": "",
+    "text": "source\n\nTrainer\n\n Trainer (hp:singleline_models.utils.CfgNode, device='cuda',\n          models_dir='models', use_wandb=False, wandb_project='sketch-\n          transformer', wandb_entity='andrewlook')\n\nInitialize self. See help(type(self)) for accurate signature.\n\nsource\n\n\nget_default_config\n\n get_default_config ()",
+    "crumbs": [
+      "sketch_transformer",
+      "trainer"
+    ]
+  },
+  {
+    "objectID": "sketch_transformer/masks.html",
+    "href": "sketch_transformer/masks.html",
+    "title": "masks",
+    "section": "",
+    "text": "For attention masking, pytorch nn.MultiHeadAttention accepts either float or boolean masks.\nThere was a bug with float masks, causing Nan values to get generated sometimes: - regression - nn.MultiheadAttention does not respect adding of floating point mask to attention for the fast path · Issue #107084 · pytorch/pytorch - TransformerEncoderLayer fast path predicts NaN when provided attention bias · Issue #118628 · pytorch/pytorch - Disable nn.MHA fastpath for floating point masks by mikaylagawarecki · Pull Request #107641 · pytorch/pytorch\nSo I’m using boolean masks instead. Note: pytorch converts 1 == True, 0 == False.\nFrom the docs for MultiheadAttention.forward(): - key_padding_mask – If specified, a mask of shape (N,S) indicating which elements within key to ignore for the purpose of attention (i.e. treat as “padding”). For unbatched query, shape should be (S). Binary and float masks are supported. For a binary mask, a True value indicates that the corresponding key value will be ignored for the purpose of attention. For a float mask, it will be directly added to the corresponding key value. - attn_mask – If specified, a 2D or 3D mask preventing attention to certain positions. Must be of shape (L,S) or (N⋅num_heads,L,S), where N is the batch size, L is the target sequence length, and S is the source sequence length. A 2D mask will be broadcasted across the batch while a 3D mask allows for a different mask for each entry in the batch. Binary and float masks are supported. For a binary mask, a True value indicates that the corresponding position is not allowed to attend. For a float mask, the mask values will be added to the attention weight. If both attn_mask and key_padding_mask are supplied, their types should match.\n\nsource\n\nmake_dummy_input\n\n make_dummy_input (total_seq_len, nattn, batch_size)\n\n\nsource\n\n\ncreate_masks\n\n create_masks (input_seq, target_seq, device='cuda')\n\n\nsource\n\n\ncreate_lookahead_mask\n\n create_lookahead_mask (seq_len)\n\nCreate an attention mask, with rows representing target position and columns representing source position.\nFor row=i, column=j, mask[i][j] is ‘True’ if the decoder must ignore position j when processing position i.\nAn upper diagonal matrix (without the diagonal) will have ‘True’ for any j &gt; i.\n:param seq_len: sequence length :return: (seq_len, seq_len)\n\nsource\n\n\ncreate_padding_mask\n\n create_padding_mask (seq)\n\nIn seq, the 5th entry in the last dimension is the padding column, which will be 1 if the row is padding.\nConvert to a boolean tensor, indicating ‘True’ for entries that are padding and should be ignored.\n:param seq: (batch_size, seq_len, 5) :return: (batch_size, seq_len)",
+    "crumbs": [
+      "sketch_transformer",
+      "masks"
+    ]
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "singleline_models",
+    "section": "",
+    "text": "pip install singleline_models",
+    "crumbs": [
+      "singleline_models"
+    ]
+  },
+  {
+    "objectID": "index.html#install",
+    "href": "index.html#install",
+    "title": "singleline_models",
+    "section": "",
+    "text": "pip install singleline_models",
+    "crumbs": [
+      "singleline_models"
+    ]
+  },
+  {
+    "objectID": "index.html#models",
+    "href": "index.html#models",
+    "title": "singleline_models",
+    "section": "Models",
+    "text": "Models\n\nSketch RNN\nPyTorch implementation of the SketchRNN paper, A Neural Representation of Sketch Drawings.\nSketch RNN learns to reconstruct stroke-based drawings, by predicting a series of strokes. It uses a sequence-to-sequence LSTM model, with gaussian mixture heads to produce a sequence of stroke coordinates.\n\n\n\nseq2seq model\n\n\n\n\nDatasets\n\ndata/quickdraw/: Sample data from Quick, Draw! Dataset\ndata/look/: Custom dataset of single-line drawings by @andrewlook\n\nAll data is stored in stroke-3 format, meaning a list with three columns:\n\ndelta_x\ndelta_y\nlift_pen (if 1, “lift the pen” and start a new stroke; otherwise 0)\n\n\n\n\nstroke-3 turtle\n\n\n\n\nAcknowledgements\n\nPyTorch Sketch RNN project by Alexis David Jacq\nAnnotated Sketch RNN in PyTorch by LabML\nTensorflow SketchRNN by Magenta Team and David Ha\nsketch-rnn-datasets by David Ha\nSketchRNN-Pytorch by OhataKenji\n\n\n\nImprovements\n\nLog epoch and learning rate\nLR decay\nETA decay (for KL loss)\nDropout\nLayer Normalization\nRecurrent Dropout",
+    "crumbs": [
+      "singleline_models"
+    ]
+  },
+  {
+    "objectID": "sketch_rnn/trainer.html",
+    "href": "sketch_rnn/trainer.html",
+    "title": "trainer",
+    "section": "",
+    "text": "source\n\nSketchRNNModel\n\n SketchRNNModel (hp, device='cuda')\n\nBase class for all neural network modules.\nYour models should also subclass this class.\nModules can also contain other Modules, allowing to nest them in a tree structure. You can assign the submodules as regular attributes::\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass Model(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.conv1 = nn.Conv2d(1, 20, 5)\n        self.conv2 = nn.Conv2d(20, 20, 5)\n\n    def forward(self, x):\n        x = F.relu(self.conv1(x))\n        return F.relu(self.conv2(x))\nSubmodules assigned in this way will be registered, and will have their parameters converted too when you call :meth:to, etc.\n.. note:: As per the example above, an __init__() call to the parent class must be made before assignment on the child.\n:ivar training: Boolean represents whether this module is in training or evaluation mode. :vartype training: bool\n\nsource\n\n\nTrainer\n\n Trainer (model:__main__.SketchRNNModel,\n          hp:singleline_models.utils.CfgNode, device='cuda',\n          models_dir='models', use_wandb=False, wandb_project='sketchrnn-\n          pytorch', wandb_entity='andrewlook')\n\nInitialize self. See help(type(self)) for accurate signature.",
+    "crumbs": [
+      "sketch_rnn",
+      "trainer"
+    ]
+  },
+  {
+    "objectID": "sketch_rnn/sampler.html",
+    "href": "sketch_rnn/sampler.html",
+    "title": "sampler",
+    "section": "",
+    "text": "source\n\nSampler\n\n Sampler ()\n\nThis samples a sketch from the decoder and plots it",
+    "crumbs": [
+      "sketch_rnn",
+      "sampler"
+    ]
+  }
+]
